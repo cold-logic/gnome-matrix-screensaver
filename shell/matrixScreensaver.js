@@ -55,6 +55,35 @@ export const MatrixScreensaverEffect = GObject.registerClass({
         }
     }
 
+    vfunc_pre_paint(node, paintContext) {
+        const result = super.vfunc_pre_paint(node, paintContext);
+
+        // Override the NEAREST filter that ClutterOffscreenEffect's
+        // ensure_pipeline_filter_for_scale() sets for non-fractional scaling.
+        //
+        // That NEAREST filter is correct for the standard offscreen use case
+        // (paint FBO → screen at 1:1 texel:pixel). But our shader DOWNSAMPLES
+        // the FBO: the 512×512 atlas (8×8 cells) is stretched to fill the FBO
+        // at monitor resolution, then the shader maps each screen cell
+        // (1/matrix_columns of screen) to an atlas cell (1/8 of FBO). This is
+        // a ~12:1 downsampling ratio. NEAREST during downsampling causes
+        // severe aliasing — the shader randomly hits or misses the smooth AA
+        // edge texels, producing jagged glyph edges at any AA sharpness value.
+        //
+        // LINEAR ensures bilinear interpolation during downsampling, preserving
+        // the smooth anti-aliased edges from the atlas PNG.
+        const pipeline = this.get_pipeline();
+        if (pipeline) {
+            pipeline.set_layer_filters(
+                0,
+                Cogl.PipelineFilter.LINEAR,
+                Cogl.PipelineFilter.LINEAR
+            );
+        }
+
+        return result;
+    }
+
     _applyUniform(name, count, values) {
         if (!this._locations) {
             this._locations = new Map();
