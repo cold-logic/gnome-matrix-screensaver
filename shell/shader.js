@@ -136,8 +136,8 @@ float cell_edge_feather =
     smoothstep(1.0, 1.0 - feather_margin, glyph_local.y);
 
 if (matrix_glow > 0.5 || matrix_soft_blur > 0.5) {
-    // Dynamic subpixel offset: scales proportionally with column density to preserve consistent 1.5px optical blur
-    float halo_offset = clamp(1.65 / max(matrix_columns, matrix_rows), 0.015, 0.045);
+    // Exact atlas texel offset: 1.5 pixels in a 64x64 glyph cell (1.5 / 64.0)
+    float halo_offset = 1.50 / 64.0;
 
     vec4 sample_right = matrix_glyph_sample(glyph_index, glyph_local + vec2(halo_offset, 0.0));
     vec4 sample_left  = matrix_glyph_sample(glyph_index, glyph_local - vec2(halo_offset, 0.0));
