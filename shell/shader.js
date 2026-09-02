@@ -130,12 +130,11 @@ vec3 active_cursor_color = matrix_cursor_color;
 vec3 dark_trail = active_rain_color * 0.15;
 vec3 trail_color = mix(dark_trail, active_rain_color, pow(rain.x, 0.72));
 
-// Gate cursor/glint white highlights behind matrix_glow.
-// When glow is off (matrix_glow <= 0.5): core_gate = 0, trail_color is used as-is,
-// no white bleeds into AA edges. When glow is on: use fwidth-based SDF threshold
-// (screen-space derivative) so the white zone is always ~2 screen pixels wide.
+// Cursor/glint white highlights confined to solid stroke interior via fwidth-based SDF threshold.
+// fwidth(glyph_alpha) = screen-space derivative = ~1/N for a gradient spanning N pixels,
+// making the white zone always ~2 screen pixels wide regardless of glyph scale.
 float _aa_hw = max(fwidth(glyph_alpha), 0.001);
-float core_gate = smoothstep(0.5 - _aa_hw, 0.5 + _aa_hw, glyph_alpha) * step(0.5, matrix_glow);
+float core_gate = smoothstep(0.5 - _aa_hw, 0.5 + _aa_hw, glyph_alpha);
 vec3 glint_color = mix(trail_color, mix(active_rain_color, vec3(1.0), 0.45), rain.z * 0.72 * core_gate);
 vec3 core_color = mix(glint_color, active_cursor_color, rain.y * core_gate);
 
