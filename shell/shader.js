@@ -174,9 +174,19 @@ if (matrix_soft_blur > 0.5) {
 
 float rain_strength = max(rain.x, max(rain.y, rain.z));
 float core_alpha = glyph_alpha * illumination;
-float halo_alpha = halo * rain_strength * matrix_glow * 0.34;
 
-// Combine solid core color and glowing outer halo
+// Gate the halo bloom to actual glyph stroke proximity.
+// Without this, neighbor-alpha samples from the atlas fire across the entire
+// cell background (glyph_alpha = 0 regions), painting a colored rectangle
+// around every character tile. stroke_proximity is the max of:
+//   - glyph_alpha: coverage at this exact pixel
+//   - halo:        max coverage of the 4 immediate neighbors
+// Only pixels with at least one nearby stroke contribute to the outer glow.
+float stroke_proximity = max(glyph_alpha, halo);
+float halo_contour_gate = smoothstep(0.02, 0.25, stroke_proximity);
+float halo_alpha = halo * rain_strength * matrix_glow * 0.34 * halo_contour_gate;
+
+// Composite: solid inner core + soft outer glow, over black background
 vec3 final_color = core_color * core_alpha + active_rain_color * halo_alpha;
 
 // Output: Pure opaque solid black background with glowing code rain
