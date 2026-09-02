@@ -76,6 +76,12 @@ float active_glyph_count = max(2.0, matrix_glyph_count);
 float glyph_index = floor(matrix_hash(
     cell_seed + glyph_epoch * 97.31) * active_glyph_count);
 vec4 glyph_sample = matrix_glyph_sample(glyph_index, glyph_local);
+// glyph_alpha extraction:
+//   RGBA_8888 (procedural Cairo atlases): glyph_sample.a is true AA coverage; for white text
+//     max(r,g,b,a) = max(1,1,1,a) = 1.0 for all non-transparent pixels (hard edges).
+//   RGB_888 (Katakana grayscale PNG, Cogl.PixelFormat.RGB_888): Cogl returns tex.a=0 for
+//     RGB-only textures (not 1.0 as the raw OpenGL spec would), so max(r,g,b,a)=max(r,g,b)
+//     = luminance — correctly giving smooth AA coverage values in [0, 1] from the PNG.
 float glyph_alpha = max(max(glyph_sample.r, glyph_sample.g), max(glyph_sample.b, glyph_sample.a)) * glyph_cell_mask;
 
 float speed = mix(0.55, 1.45, depth);
@@ -122,9 +128,15 @@ vec3 active_cursor_color = matrix_cursor_color;
 vec3 dark_trail = active_rain_color * 0.15;
 vec3 trail_color = mix(dark_trail, active_rain_color, pow(rain.x, 0.72));
 
-// Only allow white highlight (cursor & stream intersection glint) to illuminate the solid inner core of the glyph
-// Anti-aliased outer edge pixels remain cleanly saturated with trail color, eliminating ugly jagged white fringing
-float core_gate = smoothstep(0.35, 0.90, glyph_alpha);
+// Gate cursor/glint white highlights to the solid interior of the glyph stroke.
+// Old approach: smoothstep(0.35, 0.90, glyph_alpha) — hardcoded 0.55-wide transition range
+//   → up to 5–15 screen pixels of partial white bleeding into AA edges (the "jagged halo").
+// New approach (SDF rendering standard, per learnopengl.com / docs.gtk.org research):
+//   fwidth(glyph_alpha) = screen-space derivative magnitude = 1/N where the glyph edge
+//   spans N pixels. The smoothstep range is 2*fwidth wide, always ~2 screen pixels,
+//   regardless of glyph size or scale. White is now strictly confined to the solid interior.
+float _aa_hw = max(fwidth(glyph_alpha), 0.001);
+float core_gate = smoothstep(0.5 - _aa_hw, 0.5 + _aa_hw, glyph_alpha);
 vec3 glint_color = mix(trail_color, mix(active_rain_color, vec3(1.0), 0.45), rain.z * 0.72 * core_gate);
 vec3 core_color = mix(glint_color, active_cursor_color, rain.y * core_gate);
 
