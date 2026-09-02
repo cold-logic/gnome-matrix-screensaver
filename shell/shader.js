@@ -76,13 +76,15 @@ float active_glyph_count = max(2.0, matrix_glyph_count);
 float glyph_index = floor(matrix_hash(
     cell_seed + glyph_epoch * 97.31) * active_glyph_count);
 vec4 glyph_sample = matrix_glyph_sample(glyph_index, glyph_local);
-// glyph_alpha extraction:
-//   RGBA_8888 (procedural Cairo atlases): glyph_sample.a is true AA coverage; for white text
-//     max(r,g,b,a) = max(1,1,1,a) = 1.0 for all non-transparent pixels (hard edges).
-//   RGB_888 (Katakana grayscale PNG, Cogl.PixelFormat.RGB_888): Cogl returns tex.a=0 for
-//     RGB-only textures (not 1.0 as the raw OpenGL spec would), so max(r,g,b,a)=max(r,g,b)
-//     = luminance — correctly giving smooth AA coverage values in [0, 1] from the PNG.
-float glyph_alpha = max(max(glyph_sample.r, glyph_sample.g), max(glyph_sample.b, glyph_sample.a)) * glyph_cell_mask;
+// glyph_alpha uses only max(r,g,b) — never tex.a.
+// Cogl.PixelFormat.RGB_888 (Katakana grayscale PNG): Cogl returns tex.a=1.0 (OpenGL default
+// for RGB textures). Including .a would force glyph_alpha=1.0 for every pixel including the
+// black background and AA edge pixels, causing is_chromatic to misfire on mid-gray edges
+// (length(gray - vec3(1.0)) > 0.04) → active_rain_color = gray → white fringe.
+// max(r,g,b) = luminance for the grayscale atlas: 0 for background, smooth 0→1 at AA edges.
+// For RGBA_8888 procedural atlases: background=(0,0,0,0) → max(r,g,b)=0 ✓;
+//   white text → max(r,g,b)=1.0 ✓; colored text → max channel ✓.
+float glyph_alpha = max(max(glyph_sample.r, glyph_sample.g), glyph_sample.b) * glyph_cell_mask;
 
 float speed = mix(0.55, 1.45, depth);
 float period = mix(1.15, 2.65, column_seed);
