@@ -132,8 +132,13 @@ rain.z = mix(first_drop.x, second_drop.x, 0.5) *
 
 float illumination = clamp(rain.x * 0.88 + rain.y * 0.78 + rain.z * 0.30, 0.0, 1.0);
 
-// Multi-Color Syntax Detection: check if atlas sample has chromatic color
-float is_chromatic = step(0.04, length(glyph_sample.rgb - vec3(glyph_alpha)));
+// Multi-Color Syntax Detection: check if atlas sample has chromatic color.
+// Compare against _raw_alpha (actual atlas luminance), NOT glyph_alpha (which is
+// _shaped * glyph_cell_mask). The AA contrast curve shifts _shaped away from the
+// raw luminance at edge pixels, which would cause is_chromatic to misfire on
+// grayscale atlas edges — setting active_rain_color to the raw gray value instead
+// of the user's chosen trail color, producing white fringes.
+float is_chromatic = step(0.04, length(glyph_sample.rgb - vec3(_raw_alpha)));
 vec3 syntax_base_color = mix(matrix_rain_color, glyph_sample.rgb, is_chromatic);
 
 // Colors: Active rain & glowing cursor
