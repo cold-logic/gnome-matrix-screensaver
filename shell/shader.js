@@ -125,19 +125,46 @@ color = mix(color, active_cursor_color, rain.y);
 
 float halo = 0.0;
 float neighbor_sum = 0.0;
+vec3 neighbor_color_sum = vec3(0.0);
+
+// Smooth edge feathering at cell boundary to avoid hard box shearing
+float feather_margin = 0.045;
+float cell_edge_feather =
+    smoothstep(0.0, feather_margin, glyph_local.x) *
+    smoothstep(1.0, 1.0 - feather_margin, glyph_local.x) *
+    smoothstep(0.0, feather_margin, glyph_local.y) *
+    smoothstep(1.0, 1.0 - feather_margin, glyph_local.y);
+
 if (matrix_glow > 0.5 || matrix_soft_blur > 0.5) {
-    float halo_offset = 2.25 / 64.0;
-    float neighbor_right = matrix_glyph_alpha(glyph_index, glyph_local + vec2(halo_offset, 0.0));
-    float neighbor_left = matrix_glyph_alpha(glyph_index, glyph_local - vec2(halo_offset, 0.0));
-    float neighbor_down = matrix_glyph_alpha(glyph_index, glyph_local + vec2(0.0, halo_offset));
-    float neighbor_up = matrix_glyph_alpha(glyph_index, glyph_local - vec2(0.0, halo_offset));
-    neighbor_sum = neighbor_right + neighbor_left + neighbor_down + neighbor_up;
-    halo = max(max(neighbor_right, neighbor_left), max(neighbor_down, neighbor_up)) * glyph_cell_mask;
+    // Dynamic subpixel offset: scales proportionally with column density to preserve consistent 1.5px optical blur
+    float halo_offset = clamp(1.65 / max(matrix_columns, matrix_rows), 0.015, 0.045);
+
+    vec4 sample_right = matrix_glyph_sample(glyph_index, glyph_local + vec2(halo_offset, 0.0));
+    vec4 sample_left  = matrix_glyph_sample(glyph_index, glyph_local - vec2(halo_offset, 0.0));
+    vec4 sample_down  = matrix_glyph_sample(glyph_index, glyph_local + vec2(0.0, halo_offset));
+    vec4 sample_up    = matrix_glyph_sample(glyph_index, glyph_local - vec2(0.0, halo_offset));
+
+    float a_r = max(max(sample_right.r, sample_right.g), max(sample_right.b, sample_right.a));
+    float a_l = max(max(sample_left.r, sample_left.g), max(sample_left.b, sample_left.a));
+    float a_d = max(max(sample_down.r, sample_down.g), max(sample_down.b, sample_down.a));
+    float a_u = max(max(sample_up.r, sample_up.g), max(sample_up.b, sample_up.a));
+
+    neighbor_sum = a_r + a_l + a_d + a_u;
+    halo = max(max(a_r, a_l), max(a_d, a_u)) * cell_edge_feather;
+
+    neighbor_color_sum = sample_right.rgb + sample_left.rgb + sample_down.rgb + sample_up.rgb;
 }
 
 if (matrix_soft_blur > 0.5) {
+    // 4-tap convolution blur with energy conservation (0.40 center + 4 * 0.15 neighbors = 1.0)
     float softened_alpha = glyph_alpha * 0.40 + neighbor_sum * 0.15;
-    glyph_alpha = mix(glyph_alpha, softened_alpha, 0.72) * glyph_cell_mask;
+    glyph_alpha = mix(glyph_alpha, softened_alpha, 0.72) * cell_edge_feather;
+
+    // Optical chromatic softening for multi-color themes
+    if (is_chromatic > 0.5) {
+        vec3 softened_color = color * 0.40 + neighbor_color_sum * 0.15;
+        color = mix(color, softened_color, 0.50);
+    }
 }
 
 float rain_strength = max(rain.x, max(rain.y, rain.z));
