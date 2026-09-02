@@ -177,6 +177,8 @@ export default class TealMatrixPreferences extends ExtensionPreferences {
         });
         settings.bind('soft-blur-enabled', blurRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         opticsGroup.add(blurRow);
+
+        this._addScaleRow(settings, opticsGroup, 'aa-sharpness', _('Edge Sharpness'), _('Anti-aliasing edge crispness (low = soft feathered, high = sharp crisp)'), 0, 100, 1, '%');
     }
 
     _addColorRow(settings, group, key, title, subtitle, defaultHex) {

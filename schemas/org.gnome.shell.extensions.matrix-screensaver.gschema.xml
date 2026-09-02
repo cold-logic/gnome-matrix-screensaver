@@ -90,5 +90,11 @@
       <summary>Cinematic Blur</summary>
       <description>Anti-alias adjacent glyph samples.</description>
     </key>
+    <key name="aa-sharpness" type="d">
+      <default>50.0</default>
+      <range min="0.0" max="100.0"/>
+      <summary>Edge Sharpness</summary>
+      <description>Anti-aliasing edge crispness. Low = soft feathered edges, High = sharp crisp edges.</description>
+    </key>
   </schema>
 </schemalist>

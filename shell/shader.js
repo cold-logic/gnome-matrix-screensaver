@@ -16,6 +16,7 @@ uniform float matrix_glyph_scale;
 uniform float matrix_speed;
 uniform float matrix_stream_density;
 uniform float matrix_soft_blur;
+uniform float matrix_aa_sharpness;
 uniform float matrix_glyph_count;
 uniform vec3 matrix_rain_color;
 uniform vec3 matrix_cursor_color;
@@ -84,7 +85,16 @@ vec4 glyph_sample = matrix_glyph_sample(glyph_index, glyph_local);
 // max(r,g,b) = luminance for the grayscale atlas: 0 for background, smooth 0→1 at AA edges.
 // For RGBA_8888 procedural atlases: background=(0,0,0,0) → max(r,g,b)=0 ✓;
 //   white text → max(r,g,b)=1.0 ✓; colored text → max channel ✓.
-float glyph_alpha = max(max(glyph_sample.r, glyph_sample.g), glyph_sample.b) * glyph_cell_mask;
+float _raw_alpha = max(max(glyph_sample.r, glyph_sample.g), glyph_sample.b);
+
+// AA sharpness: contrast curve centered at 0.5.
+// matrix_aa_sharpness=0 → contrast=1 (identity, natural soft AA from PNG).
+// matrix_aa_sharpness=1 → contrast=32 (near-hard edge, ~1px transition).
+// Black (0) and white (1) pixels are unaffected; only the mid-gray AA zone is squeezed.
+float _aa_contrast = mix(1.0, 32.0, matrix_aa_sharpness);
+float _shaped = clamp((_raw_alpha - 0.5) * _aa_contrast + 0.5, 0.0, 1.0);
+float glyph_alpha = _shaped * glyph_cell_mask;
+
 
 float speed = mix(0.55, 1.45, depth);
 float period = mix(1.15, 2.65, column_seed);

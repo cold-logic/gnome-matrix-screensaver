@@ -36,6 +36,7 @@ export const MatrixScreensaverEffect = GObject.registerClass({
             matrix_speed: [0.4],
             matrix_stream_density: [1.0],
             matrix_soft_blur: [0.0],
+            matrix_aa_sharpness: [0.5],
             matrix_glyph_count: [57.0],
             matrix_rain_color: [0.051, 0.878, 0.922],
             matrix_cursor_color: [0.051, 0.878, 0.922],
@@ -126,6 +127,13 @@ export const MatrixScreensaverEffect = GObject.registerClass({
         this.queue_repaint();
     }
 
+    setAaSharpness(pct) {
+        const val = [Math.max(0.0, Math.min(1.0, pct / 100.0))];
+        this._state.matrix_aa_sharpness = val;
+        this._applyUniform('matrix_aa_sharpness', 1, val);
+        this.queue_repaint();
+    }
+
     setGlyphCount(count) {
         const val = [Math.max(2.0, count)];
         this._state.matrix_glyph_count = val;
@@ -205,6 +213,7 @@ class MonitorScreensaverActor {
         this._effect.setStreamDensity(settings.get_double('stream-density'));
         this._effect.setGlowEnabled(settings.get_boolean('glow-enabled'));
         this._effect.setSoftBlurEnabled(settings.get_boolean('soft-blur-enabled'));
+        this._effect.setAaSharpness(settings.get_double('aa-sharpness'));
     }
 
     show(immediate = false, isLocked = false) {
@@ -319,6 +328,7 @@ export class MatrixScreensaverManager {
             'changed::stream-density', () => this._syncSettings(),
             'changed::glow-enabled', () => this._syncSettings(),
             'changed::soft-blur-enabled', () => this._syncSettings(),
+            'changed::aa-sharpness', () => this._syncSettings(),
             'changed::glyph-set', () => this._rebuildActors(),
             'changed::idle-timeout', () => this._armIdleWatch(),
             'changed::screensaver-enabled', () => this._onEnabledChanged(),
