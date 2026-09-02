@@ -162,6 +162,9 @@ export class AtlasManager {
         cr.paint();
         cr.setOperator(Cairo.Operator.OVER);
 
+        // Explicit High-Fidelity Subpixel Antialiasing
+        cr.setAntialias(Cairo.Antialias.SUBPIXEL);
+
         const layout = PangoCairo.create_layout(cr);
         const fontDesc = Pango.FontDescription.from_string(font);
         layout.set_font_description(fontDesc);
