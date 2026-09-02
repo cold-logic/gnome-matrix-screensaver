@@ -118,10 +118,15 @@ vec3 syntax_base_color = mix(matrix_rain_color, glyph_sample.rgb, is_chromatic);
 vec3 active_rain_color = syntax_base_color;
 vec3 active_cursor_color = matrix_cursor_color;
 
+// Base trail color ramp (dark teal -> bright teal)
 vec3 dark_trail = active_rain_color * 0.15;
-vec3 color = mix(dark_trail, active_rain_color, pow(rain.x, 0.72));
-color = mix(color, mix(active_rain_color, vec3(1.0), 0.45), rain.z * 0.72);
-color = mix(color, active_cursor_color, rain.y);
+vec3 trail_color = mix(dark_trail, active_rain_color, pow(rain.x, 0.72));
+
+// Only allow white highlight (cursor & stream intersection glint) to illuminate the solid inner core of the glyph
+// Anti-aliased outer edge pixels remain cleanly saturated with trail color, eliminating ugly jagged white fringing
+float core_gate = smoothstep(0.35, 0.90, glyph_alpha);
+vec3 glint_color = mix(trail_color, mix(active_rain_color, vec3(1.0), 0.45), rain.z * 0.72 * core_gate);
+vec3 core_color = mix(glint_color, active_cursor_color, rain.y * core_gate);
 
 float halo = 0.0;
 float neighbor_sum = 0.0;
@@ -162,18 +167,20 @@ if (matrix_soft_blur > 0.5) {
 
     // Optical chromatic softening for multi-color themes
     if (is_chromatic > 0.5) {
-        vec3 softened_color = color * 0.40 + neighbor_color_sum * 0.15;
-        color = mix(color, softened_color, 0.50);
+        vec3 softened_color = core_color * 0.40 + neighbor_color_sum * 0.15;
+        core_color = mix(core_color, softened_color, 0.50);
     }
 }
 
 float rain_strength = max(rain.x, max(rain.y, rain.z));
 float core_alpha = glyph_alpha * illumination;
 float halo_alpha = halo * rain_strength * matrix_glow * 0.34;
-float glyph_vis = clamp(max(core_alpha, halo_alpha), 0.0, 1.0);
+
+// Combine solid core color and glowing outer halo
+vec3 final_color = core_color * core_alpha + active_rain_color * halo_alpha;
 
 // Output: Pure opaque solid black background with glowing code rain
-cogl_color_out = vec4(color * glyph_vis, 1.0);
+cogl_color_out = vec4(final_color, 1.0);
 `;
 
 export function parseColorToRgb(str, fallback = [0.051, 0.878, 0.922]) {
