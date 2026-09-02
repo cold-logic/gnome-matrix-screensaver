@@ -27,6 +27,10 @@ This document tracks planned features, architectural improvements, and milestone
     - HTML & Web Developer code stream (`<tag>`, `{}`, `;`, `&`, `div`, etc.)
     - [x] Road & Public Signs ideogram stream (`🛑`, `⚠️`, `⛔`, `🚸`, `♿`, `🚲`, `🚦`, `⚡`)
     - [x] Digital UI Icons ideogram stream (`⚙️`, `🔍`, `💾`, `💻`, `🔔`, `🔋`, `🔒`, `🌐`)
+- [x] **Modular Themes & Multi-Color Syntax Highlighting:**
+  - Multi-chromatic atlas rendering with automatic shader chromaticity detection.
+  - Full IDE syntax highlighting for HTML & Web Rain (tags in rose pink `#f92672`, brackets in white `#f8f8f2`, attributes in lime `#a6e22e`, values in canary `#e6db74`).
+  - Strict preservation of custom single-color tinting for monochrome streams (Katakana, Binary, Hex).
 
 ---
 

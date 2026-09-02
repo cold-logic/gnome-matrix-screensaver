@@ -37,10 +37,49 @@ export const GLYPH_SETS = {
         title: 'HTML & Web Rain',
         count: 36,
         chars: [
-            '<', '>', '/', '{', '}', ';', '&', '=', '!', '?',
-            'd', 'i', 'v', 'p', 'a', 'b', 'r', 'h', '1', '2',
-            '[', ']', '(', ')', '#', '.', ':', '"', '\'', '*',
-            '+', '-', '%', '$', '_', '~',
+            // Coral / Rose Pink: Tags, element names & slashes
+            { text: '<', color: [0.98, 0.15, 0.45] },
+            { text: '>', color: [0.98, 0.15, 0.45] },
+            { text: '/', color: [0.98, 0.15, 0.45] },
+            { text: 'd', color: [0.98, 0.15, 0.45] },
+            { text: 'i', color: [0.98, 0.15, 0.45] },
+            { text: 'v', color: [0.98, 0.15, 0.45] },
+            { text: 'p', color: [0.98, 0.15, 0.45] },
+            { text: 'a', color: [0.98, 0.15, 0.45] },
+            { text: 'h', color: [0.98, 0.15, 0.45] },
+            { text: '1', color: [0.98, 0.15, 0.45] },
+
+            // Warm White / Pale Slate: Braces, brackets & semicolons
+            { text: '{', color: [0.97, 0.97, 0.95] },
+            { text: '}', color: [0.97, 0.97, 0.95] },
+            { text: '[', color: [0.97, 0.97, 0.95] },
+            { text: ']', color: [0.97, 0.97, 0.95] },
+            { text: '(', color: [0.97, 0.97, 0.95] },
+            { text: ')', color: [0.97, 0.97, 0.95] },
+            { text: ';', color: [0.97, 0.97, 0.95] },
+            { text: ':', color: [0.97, 0.97, 0.95] },
+
+            // Electric Emerald / Lime: Attributes, identifiers & operators
+            { text: '&', color: [0.65, 0.89, 0.18] },
+            { text: '=', color: [0.65, 0.89, 0.18] },
+            { text: '!', color: [0.65, 0.89, 0.18] },
+            { text: '?', color: [0.65, 0.89, 0.18] },
+            { text: '#', color: [0.65, 0.89, 0.18] },
+            { text: '.', color: [0.65, 0.89, 0.18] },
+            { text: '*', color: [0.65, 0.89, 0.18] },
+            { text: '+', color: [0.65, 0.89, 0.18] },
+            { text: '-', color: [0.65, 0.89, 0.18] },
+            { text: '%', color: [0.65, 0.89, 0.18] },
+            { text: '$', color: [0.65, 0.89, 0.18] },
+            { text: '_', color: [0.65, 0.89, 0.18] },
+            { text: '~', color: [0.65, 0.89, 0.18] },
+
+            // Canary Amber / Gold: Values, quotes & literals
+            { text: '"', color: [0.90, 0.86, 0.45] },
+            { text: '\'', color: [0.90, 0.86, 0.45] },
+            { text: '2', color: [0.90, 0.86, 0.45] },
+            { text: 'b', color: [0.90, 0.86, 0.45] },
+            { text: 'r', color: [0.90, 0.86, 0.45] },
         ],
     },
     road: {
@@ -127,15 +166,17 @@ export class AtlasManager {
         const fontDesc = Pango.FontDescription.from_string(font);
         layout.set_font_description(fontDesc);
 
-        // Pure white glyphs for fragment shader sampling
-        cr.setSourceRGBA(1.0, 1.0, 1.0, 1.0);
-
         for (let i = 0; i < chars.length && i < (GLYPH_ATLAS_COLUMNS * GLYPH_ATLAS_ROWS); i++) {
-            const char = chars[i];
+            const item = chars[i];
+            const text = (typeof item === 'string') ? item : item.text;
+            const color = (typeof item === 'object' && item.color) ? item.color : [1.0, 1.0, 1.0];
+
+            cr.setSourceRGBA(color[0], color[1], color[2], 1.0);
+
             const col = i % GLYPH_ATLAS_COLUMNS;
             const row = Math.floor(i / GLYPH_ATLAS_COLUMNS);
 
-            layout.set_text(char, -1);
+            layout.set_text(text, -1);
             const [, extents] = layout.get_pixel_extents();
 
             // Center character in cell

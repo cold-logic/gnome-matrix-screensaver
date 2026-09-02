@@ -24,13 +24,17 @@ float matrix_hash(float value) {
     return fract(sin(value * 12.9898) * 43758.5453);
 }
 
-float matrix_glyph_alpha(float glyph_index, vec2 local) {
+vec4 matrix_glyph_sample(float glyph_index, vec2 local) {
     vec2 atlas_cell = vec2(
         mod(glyph_index, ${GLYPH_ATLAS_COLUMNS}.0),
         floor(glyph_index / ${GLYPH_ATLAS_COLUMNS}.0));
     vec2 atlas_uv = (atlas_cell + clamp(local, 0.015, 0.985)) /
         vec2(${GLYPH_ATLAS_COLUMNS}.0, ${GLYPH_ATLAS_ROWS}.0);
-    vec4 tex = texture2D(cogl_sampler_0, atlas_uv);
+    return texture2D(cogl_sampler_0, atlas_uv);
+}
+
+float matrix_glyph_alpha(float glyph_index, vec2 local) {
+    vec4 tex = matrix_glyph_sample(glyph_index, local);
     return max(max(tex.r, tex.g), max(tex.b, tex.a));
 }
 
@@ -71,12 +75,12 @@ float glyph_epoch = floor(animation_time * mutation_rate +
 float active_glyph_count = max(2.0, matrix_glyph_count);
 float glyph_index = floor(matrix_hash(
     cell_seed + glyph_epoch * 97.31) * active_glyph_count);
-float glyph_alpha = matrix_glyph_alpha(glyph_index, glyph_local) * glyph_cell_mask;
+vec4 glyph_sample = matrix_glyph_sample(glyph_index, glyph_local);
+float glyph_alpha = max(max(glyph_sample.r, glyph_sample.g), max(glyph_sample.b, glyph_sample.a)) * glyph_cell_mask;
 
-float gap = mix(0.05, 0.22, matrix_hash(cell.x * 9.31 + 7.0));
-float period = 1.78 + gap;
-float speed = mix(0.12, 0.31, column_seed) * mix(0.82, 1.18, depth);
-float phase = matrix_hash(cell.x * 15.13 + 23.0) * period;
+float speed = mix(0.55, 1.45, depth);
+float period = mix(1.15, 2.65, column_seed);
+float phase = matrix_hash(cell.x * 19.33 + 7.0) * period;
 float primary_travel = animation_time * speed + phase;
 float primary_cycle = floor(primary_travel / period);
 float primary_length = mix(0.28, 0.78, matrix_hash(
@@ -95,23 +99,23 @@ float second_cycle = floor(second_travel / period);
 float second_length = mix(0.24, 0.70, matrix_hash(
     cell.x * 21.7 + second_cycle * 73.9 + 5.0));
 float head_two = mod(second_travel, period) - second_length;
-float second_probability = clamp((stream_density - 0.75) * 0.70, 0.0, 0.70);
+
+float secondary_probability = min(stream_density * 0.42, 1.0);
 vec3 second_drop = matrix_drop(head_two, row, second_length, cell_height) *
-    step(1.0 - second_probability, matrix_hash(cell.x * 27.1 + 13.0));
+    step(1.0 - secondary_probability, matrix_hash(cell.x * 47.19 + 53.0));
 
 vec3 rain = max(first_drop, second_drop);
-
-float depth_brightness = mix(0.58, 1.0, depth);
-rain.x = floor(clamp(rain.x, 0.0, 1.0) * 7.0 + 0.5) / 7.0;
-rain.x *= depth_brightness;
-float redraw_epoch = floor(animation_time * 1.35);
-float redraw_glint = step(0.965, matrix_hash(cell_seed * 2.17 + redraw_epoch * 79.3));
-rain.z = max(rain.z, redraw_glint * rain.x * (1.0 - rain.y) * 0.72);
+rain.z = mix(first_drop.x, second_drop.x, 0.5) *
+    step(0.01, first_drop.x) * step(0.01, second_drop.x);
 
 float illumination = clamp(rain.x * 0.88 + rain.y * 0.78 + rain.z * 0.30, 0.0, 1.0);
 
+// Multi-Color Syntax Detection: check if atlas sample has chromatic color
+float is_chromatic = step(0.08, length(glyph_sample.rgb - vec3(glyph_alpha)));
+vec3 syntax_base_color = mix(matrix_rain_color, glyph_sample.rgb, is_chromatic);
+
 // Colors: Active rain & glowing cursor
-vec3 active_rain_color = matrix_rain_color;
+vec3 active_rain_color = syntax_base_color;
 vec3 active_cursor_color = matrix_cursor_color;
 
 vec3 dark_trail = active_rain_color * 0.15;
