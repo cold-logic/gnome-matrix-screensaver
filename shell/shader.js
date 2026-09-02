@@ -111,7 +111,7 @@ rain.z = mix(first_drop.x, second_drop.x, 0.5) *
 float illumination = clamp(rain.x * 0.88 + rain.y * 0.78 + rain.z * 0.30, 0.0, 1.0);
 
 // Multi-Color Syntax Detection: check if atlas sample has chromatic color
-float is_chromatic = step(0.08, length(glyph_sample.rgb - vec3(glyph_alpha)));
+float is_chromatic = step(0.04, length(glyph_sample.rgb - vec3(glyph_alpha)));
 vec3 syntax_base_color = mix(matrix_rain_color, glyph_sample.rgb, is_chromatic);
 
 // Colors: Active rain & glowing cursor
