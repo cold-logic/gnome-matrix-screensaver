@@ -1,0 +1,9 @@
+build/
+schemas/gschemas.compiled
+*.log
+graphify-out/
+graph.html
+node_modules/
+bun.lockb
+bun.lock
+.eslintcache

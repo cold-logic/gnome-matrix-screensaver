@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.matrix-screensaver" path="/org/gnome/shell/extensions/matrix-screensaver/">
+    <key name="screensaver-enabled" type="b">
+      <default>true</default>
+      <summary>Screensaver Enabled</summary>
+      <description>Master toggle for idle screensaver activation.</description>
+    </key>
+    <key name="idle-timeout" type="d">
+      <default>60.0</default>
+      <range min="5.0" max="3600.0"/>
+      <summary>Idle Timeout</summary>
+      <description>Seconds of inactivity before screensaver triggers.</description>
+    </key>
+    <key name="test-trigger" type="i">
+      <default>0</default>
+      <summary>Test Trigger</summary>
+      <description>Incremented to immediately trigger screensaver preview.</description>
+    </key>
+    <key name="inhibit-fullscreen" type="b">
+      <default>true</default>
+      <summary>Inhibit on Fullscreen</summary>
+      <description>Prevent screensaver while watching fullscreen video or gaming.</description>
+    </key>
+    <key name="lockscreen-enabled" type="b">
+      <default>true</default>
+      <summary>Lock Screen Rain</summary>
+      <description>Show falling digital rain behind the lock screen / shield.</description>
+    </key>
+    <key name="glyph-set" type="s">
+      <choices>
+        <choice value="katakana"/>
+        <choice value="binary"/>
+        <choice value="hex"/>
+        <choice value="html"/>
+        <choice value="road"/>
+        <choice value="ui"/>
+      </choices>
+      <default>'katakana'</default>
+      <summary>Glyph Character Set</summary>
+      <description>Alphabet used for digital code rain (katakana, binary, hex, html, road, ui).</description>
+    </key>
+    <key name="lead-color" type="s">
+      <default>'#0de0eb'</default>
+      <summary>Glyph Lead Color</summary>
+      <description>Hex or rgb color for the glowing leader glyphs.</description>
+    </key>
+    <key name="trail-color" type="s">
+      <default>'#0de0eb'</default>
+      <summary>Trail Color</summary>
+      <description>Hex or rgb color for the trailing rain glyphs.</description>
+    </key>
+    <key name="rain-speed" type="d">
+      <default>40.0</default>
+      <range min="10.0" max="200.0"/>
+      <summary>Animation Speed</summary>
+      <description>Fall speed percentage.</description>
+    </key>
+    <key name="font-size" type="d">
+      <default>20.0</default>
+      <range min="10.0" max="48.0"/>
+      <summary>Font Size</summary>
+      <description>Glyph font size in logical pixels.</description>
+    </key>
+    <key name="row-spacing" type="d">
+      <default>100.0</default>
+      <range min="50.0" max="150.0"/>
+      <summary>Line Height Spacing</summary>
+      <description>Vertical spacing between characters in stream (percentage).</description>
+    </key>
+    <key name="glyph-scale" type="d">
+      <default>80.0</default>
+      <range min="50.0" max="100.0"/>
+      <summary>Glyph Scale</summary>
+      <description>Percentage of grid cell occupied by symbol.</description>
+    </key>
+    <key name="stream-density" type="d">
+      <default>100.0</default>
+      <range min="25.0" max="200.0"/>
+      <summary>Stream Density</summary>
+      <description>Stream column density percentage.</description>
+    </key>
+    <key name="glow-enabled" type="b">
+      <default>false</default>
+      <summary>Phosphor Glow</summary>
+      <description>Enable subpixel bloom glow around glyphs.</description>
+    </key>
+    <key name="soft-blur-enabled" type="b">
+      <default>false</default>
+      <summary>Cinematic Blur</summary>
+      <description>Anti-alias adjacent glyph samples.</description>
+    </key>
+  </schema>
+</schemalist>

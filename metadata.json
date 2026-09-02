@@ -1,0 +1,22 @@
+{
+  "name": "Teal Matrix Screensaver",
+  "description": "Authentic Matrix digital rain idle screensaver in vibrant teal on pitch-black background for GNOME 50+.",
+  "uuid": "matrix-screensaver@cold-logic",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50"
+  ],
+  "session-modes": [
+    "user",
+    "unlock-dialog"
+  ],
+  "settings-schema": "org.gnome.shell.extensions.matrix-screensaver",
+  "gettext-domain": "matrix-screensaver@cold-logic",
+  "url": "https://github.com/cold-logic/gnome-matrix-screensaver",
+  "version": 1,
+  "version-name": "v1.0.0"
+}
