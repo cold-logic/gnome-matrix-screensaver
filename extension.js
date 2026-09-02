@@ -5,21 +5,31 @@ import {MatrixQuickSettingsIndicator} from './shell/quickSettings.js';
 
 export default class TealMatrixScreensaverExtension extends Extension {
     enable() {
+        // Guard against double-enable (Looking Glass reload, error-then-retry):
+        // destroy any existing objects before re-creating to prevent leaks.
+        if (this._manager || this._quickSettings)
+            this.disable();
+
         this._settings = this.getSettings();
+
+        let manager = null;
         try {
-            this._manager = new MatrixScreensaverManager(this._settings, this.path);
+            manager = new MatrixScreensaverManager(this._settings, this.path);
         } catch (error) {
             console.error(`[matrix-screensaver] Failed to start manager: ${error}`);
-            this._manager = null;
+            manager?.destroy();
         }
+        this._manager = manager;
 
+        let quickSettings = null;
         try {
-            this._quickSettings = new MatrixQuickSettingsIndicator(this._settings);
-            Main.panel.statusArea.quickSettings.addExternalIndicator(this._quickSettings);
+            quickSettings = new MatrixQuickSettingsIndicator(this._settings);
+            Main.panel.statusArea.quickSettings.addExternalIndicator(quickSettings);
         } catch (error) {
             console.error(`[matrix-screensaver] Failed to start Quick Settings indicator: ${error}`);
-            this._quickSettings = null;
+            quickSettings?.destroy();
         }
+        this._quickSettings = quickSettings;
     }
 
     disable() {

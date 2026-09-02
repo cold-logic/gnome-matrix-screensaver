@@ -303,6 +303,7 @@ export class MatrixScreensaverManager {
         this._idleWatchId = 0;
         this._userActiveWatchId = 0;
         this._animTimerId = null;
+        this._screenShieldLockedId = 0;
 
         // Atlas manager for static & procedural sets
         this._atlasManager = new AtlasManager(extensionPath);
@@ -312,9 +313,11 @@ export class MatrixScreensaverManager {
         // Connect shell signals
         Main.layoutManager.connectObject('monitors-changed', () => this._rebuildActors(), this);
         
-        // Lock screen awareness
+        // Lock screen awareness — screenShield is a Signals.EventEmitter,
+        // not a GObject, so connectObject() is unavailable. Use plain connect().
         if (Main.screenShield) {
-            Main.screenShield.connectObject('locked-changed', () => this._onLockStateChanged(), this);
+            this._screenShieldLockedId = Main.screenShield.connect('locked-changed',
+                () => this._onLockStateChanged());
         }
 
         // Settings change listeners
@@ -367,7 +370,9 @@ export class MatrixScreensaverManager {
     }
 
     _isLocked() {
-        return Main.screenShield ? Main.screenShield.locked : false;
+        // ScreenShield stores lock state in the private _isLocked field;
+        // there is no public .locked property.
+        return Main.screenShield ? (Main.screenShield._isLocked ?? false) : false;
     }
 
     _hasFullscreenWindow() {
@@ -546,8 +551,9 @@ export class MatrixScreensaverManager {
         }
 
         Main.layoutManager.disconnectObject(this);
-        if (Main.screenShield) {
-            Main.screenShield.disconnectObject(this);
+        if (Main.screenShield && this._screenShieldLockedId) {
+            Main.screenShield.disconnect(this._screenShieldLockedId);
+            this._screenShieldLockedId = 0;
         }
         this._settings.disconnectObject(this);
 

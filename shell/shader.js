@@ -36,7 +36,7 @@ vec4 matrix_glyph_sample(float glyph_index, vec2 local) {
 
 float matrix_glyph_alpha(float glyph_index, vec2 local) {
     vec4 tex = matrix_glyph_sample(glyph_index, local);
-    return max(max(tex.r, tex.g), max(tex.b, tex.a));
+    return max(max(tex.r, tex.g), tex.b);
 }
 
 vec3 matrix_drop(float head, float row, float drop_length, float cell_height) {
@@ -72,10 +72,14 @@ float mutation_seed = matrix_hash(cell_seed + 41.0);
 float mutation_rate = mix(0.20, 1.65, mutation_seed * mutation_seed);
 float glyph_epoch = floor(animation_time * mutation_rate +
     cell.y * 0.173 + mutation_seed * 7.0);
+// Make glyph selection periodic to avoid a global reshuffle flash when
+// matrix_time wraps (elapsed % 4096 in JS). A 1024-epoch period is long
+// enough that the same glyph rarely repeats within a viewing session.
+float glyph_epoch_periodic = mod(glyph_epoch, 1024.0);
 
 float active_glyph_count = max(2.0, matrix_glyph_count);
 float glyph_index = floor(matrix_hash(
-    cell_seed + glyph_epoch * 97.31) * active_glyph_count);
+    cell_seed + glyph_epoch_periodic * 97.31) * active_glyph_count);
 vec4 glyph_sample = matrix_glyph_sample(glyph_index, glyph_local);
 // glyph_alpha uses only max(r,g,b) — never tex.a.
 // Cogl.PixelFormat.RGB_888 (Katakana grayscale PNG): Cogl returns tex.a=1.0 (OpenGL default
@@ -141,10 +145,12 @@ vec3 dark_trail = active_rain_color * 0.15;
 vec3 trail_color = mix(dark_trail, active_rain_color, pow(rain.x, 0.72));
 
 // Cursor/glint white highlights confined to solid stroke interior via fwidth-based SDF threshold.
-// fwidth(glyph_alpha) = screen-space derivative = ~1/N for a gradient spanning N pixels,
-// making the white zone always ~2 screen pixels wide regardless of glyph scale.
-float _aa_hw = max(fwidth(glyph_alpha), 0.001);
-float core_gate = smoothstep(0.5 - _aa_hw, 0.5 + _aa_hw, glyph_alpha);
+// fwidth(_shaped) = screen-space derivative of the pre-mask coverage signal = ~1/N for a
+// gradient spanning N pixels, making the white zone always ~2 screen pixels wide regardless
+// of glyph scale. Computing fwidth on _shaped (before the glyph_cell_mask multiply) avoids
+// discontinuity spikes at cell borders where the step-function mask creates undefined derivatives.
+float _aa_hw = max(fwidth(_shaped), 0.001);
+float core_gate = smoothstep(0.5 - _aa_hw, 0.5 + _aa_hw, _shaped) * glyph_cell_mask;
 vec3 glint_color = mix(trail_color, mix(active_rain_color, vec3(1.0), 0.45), rain.z * 0.72 * core_gate);
 vec3 core_color = mix(glint_color, active_cursor_color, rain.y * core_gate);
 
@@ -169,10 +175,10 @@ if (matrix_glow > 0.5 || matrix_soft_blur > 0.5) {
     vec4 sample_down  = matrix_glyph_sample(glyph_index, glyph_local + vec2(0.0, halo_offset));
     vec4 sample_up    = matrix_glyph_sample(glyph_index, glyph_local - vec2(0.0, halo_offset));
 
-    float a_r = max(max(sample_right.r, sample_right.g), max(sample_right.b, sample_right.a));
-    float a_l = max(max(sample_left.r, sample_left.g), max(sample_left.b, sample_left.a));
-    float a_d = max(max(sample_down.r, sample_down.g), max(sample_down.b, sample_down.a));
-    float a_u = max(max(sample_up.r, sample_up.g), max(sample_up.b, sample_up.a));
+    float a_r = max(max(sample_right.r, sample_right.g), sample_right.b);
+    float a_l = max(max(sample_left.r, sample_left.g), sample_left.b);
+    float a_d = max(max(sample_down.r, sample_down.g), sample_down.b);
+    float a_u = max(max(sample_up.r, sample_up.g), sample_up.b);
 
     neighbor_sum = a_r + a_l + a_d + a_u;
     halo = max(max(a_r, a_l), max(a_d, a_u)) * cell_edge_feather;
