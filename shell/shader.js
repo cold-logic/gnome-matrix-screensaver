@@ -80,7 +80,21 @@ float glyph_epoch_periodic = mod(glyph_epoch, 1024.0);
 float active_glyph_count = max(2.0, matrix_glyph_count);
 float glyph_index = floor(matrix_hash(
     cell_seed + glyph_epoch_periodic * 97.31) * active_glyph_count);
-vec4 glyph_sample = matrix_glyph_sample(glyph_index, glyph_local);
+
+// 4x supersampling: the FBO is at monitor resolution but the shader maps each
+// screen cell (~20px) to an atlas cell in the FBO (~240 texels) — a 12:1
+// minification. Bilinear LINEAR filtering only taps 4 FBO texels per screen
+// pixel, causing severe aliasing (jagged edges). By sampling at the 4 corners
+// of the screen pixel's footprint in glyph_local space, each with bilinear
+// filtering, we get 16 effective taps — enough for alias-free downsampling.
+// fwidth(glyph_local) = rate of change per screen pixel = ~1/cell_pixels.
+// The 0.5 multiplier places samples at the pixel footprint corners.
+vec2 _ss_step = fwidth(glyph_local) * 0.5;
+vec4 _ss_1 = matrix_glyph_sample(glyph_index, glyph_local + vec2(-_ss_step.x, -_ss_step.y));
+vec4 _ss_2 = matrix_glyph_sample(glyph_index, glyph_local + vec2( _ss_step.x, -_ss_step.y));
+vec4 _ss_3 = matrix_glyph_sample(glyph_index, glyph_local + vec2(-_ss_step.x,  _ss_step.y));
+vec4 _ss_4 = matrix_glyph_sample(glyph_index, glyph_local + vec2( _ss_step.x,  _ss_step.y));
+vec4 glyph_sample = (_ss_1 + _ss_2 + _ss_3 + _ss_4) * 0.25;
 // glyph_alpha uses only max(r,g,b) — never tex.a.
 // Cogl.PixelFormat.RGB_888 (Katakana grayscale PNG): Cogl returns tex.a=1.0 (OpenGL default
 // for RGB textures). Including .a would force glyph_alpha=1.0 for every pixel including the
