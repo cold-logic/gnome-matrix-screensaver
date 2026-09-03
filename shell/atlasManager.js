@@ -41,6 +41,11 @@ const GLYPH_SETS = {
         // Every string is a valid HTML snippet on its own.
         strings: HTML_STRINGS,
         stringColors: HTML_STRING_COLORS,
+        // Rotate each character 90° CCW so text reads top-to-bottom when
+        // scrolling downward (like vertical East Asian text). Without this,
+        // characters are upright but look like isolated glyphs rather than
+        // flowing code.
+        verticalText: true,
     },
     road: {
         id: 'road',
@@ -100,7 +105,7 @@ export class AtlasManager {
         } else if (config.shaderMode === 'string') {
             // String mode: render each string vertically in one atlas column
             const chars = generateStringChars(config.strings, config.stringColors);
-            content = this._renderProceduralAtlas(coglContext, chars, config.font);
+            content = this._renderProceduralAtlas(coglContext, chars, config.font, config.verticalText);
         } else {
             // Procedurally render vector typography into atlas texture via Cairo & Pango
             content = this._renderProceduralAtlas(coglContext, config.chars, config.font);
@@ -114,7 +119,7 @@ export class AtlasManager {
         };
     }
 
-    _renderProceduralAtlas(coglContext, chars, font = 'Monospace, monospace, DejaVu Sans Mono Bold 44') {
+    _renderProceduralAtlas(coglContext, chars, font = 'Monospace, monospace, DejaVu Sans Mono Bold 44', verticalText = false) {
         const size = GLYPH_ATLAS_SIZE;
         const cellWidth = size / GLYPH_ATLAS_COLUMNS;
         const cellHeight = size / GLYPH_ATLAS_ROWS;
@@ -127,8 +132,10 @@ export class AtlasManager {
         cr.paint();
         cr.setOperator(Cairo.Operator.OVER);
 
-        // Explicit High-Fidelity Subpixel Antialiasing
-        cr.setAntialias(Cairo.Antialias.SUBPIXEL);
+        // Subpixel AA assumes horizontal RGB subpixel order. After 90° rotation
+        // the subpixel axis is vertical, which doesn't match any real display.
+        // Use gray antialiasing for rotated text; subpixel for normal text.
+        cr.setAntialias(verticalText ? Cairo.Antialias.GRAY : Cairo.Antialias.SUBPIXEL);
 
         const layout = PangoCairo.create_layout(cr);
         const fontDesc = Pango.FontDescription.from_string(font);
@@ -150,12 +157,33 @@ export class AtlasManager {
             layout.set_text(text, -1);
             const [, extents] = layout.get_pixel_extents();
 
-            // Center character in cell
-            const x = col * cellWidth + (cellWidth - extents.width) / 2 - extents.x;
-            const y = row * cellHeight + (cellHeight - extents.height) / 2 - extents.y;
+            if (verticalText) {
+                // Rotate 90° CCW so text reads top-to-bottom when scrolling down.
+                // Translate to cell center, rotate, update Pango layout for the
+                // new CTM, then draw centered at origin.
+                const cx = col * cellWidth + cellWidth / 2;
+                const cy = row * cellHeight + cellHeight / 2;
 
-            cr.moveTo(x, y);
-            PangoCairo.show_layout(cr, layout);
+                cr.save();
+                cr.translate(cx, cy);
+                cr.rotate(-Math.PI / 2);
+                PangoCairo.update_layout(cr, layout);
+
+                // After rotation, the character's original width maps to the
+                // vertical axis and height to the horizontal axis. Center at origin.
+                const x = -extents.width / 2 - extents.x;
+                const y = -extents.height / 2 - extents.y;
+                cr.moveTo(x, y);
+                PangoCairo.show_layout(cr, layout);
+                cr.restore();
+            } else {
+                // Center character in cell (horizontal text)
+                const x = col * cellWidth + (cellWidth - extents.width) / 2 - extents.x;
+                const y = row * cellHeight + (cellHeight - extents.height) / 2 - extents.y;
+
+                cr.moveTo(x, y);
+                PangoCairo.show_layout(cr, layout);
+            }
         }
 
         // Use temporary PNG to guarantee reliable Cogl texture pixel conversion in modern GJS
