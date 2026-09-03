@@ -14,7 +14,7 @@ export const GLYPH_ATLAS_SIZE = 512;
  * Shared declarations: uniforms, helper functions, and atlas sampling.
  * Used by all shader modes.
  */
-export const SHARED_DECLARATIONS = `
+const SHARED_DECLARATIONS = `
 uniform sampler2D cogl_sampler_0;
 uniform float matrix_time;
 uniform float matrix_columns;

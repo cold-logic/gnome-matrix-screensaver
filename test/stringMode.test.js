@@ -480,4 +480,9 @@ describe('Shader module exports', () => {
         expect(typeof shaderModule.buildShaderCode).toBe('function');
         expect(typeof shaderModule.buildShaderDeclarations).toBe('function');
     });
+
+    it('SHARED_DECLARATIONS is not exported (internal only)', async () => {
+        const shaderModule = await import('../shell/shader.js');
+        expect(shaderModule.SHARED_DECLARATIONS).toBeUndefined();
+    });
 });
