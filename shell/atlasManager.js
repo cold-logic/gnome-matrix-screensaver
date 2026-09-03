@@ -42,25 +42,26 @@ export const GLYPH_SETS = {
         // Each string is rendered vertically in one atlas column (up to 8 chars).
         // The shader picks one string per screen column and scrolls through its
         // characters, so each rain stream displays a recognizable HTML token.
+        // Every string is a valid HTML snippet on its own.
         strings: [
-            '<div>',   // 0: Coral — HTML tag
-            '</div>',  // 1: Coral — closing tag
-            'class=',  // 2: Emerald — attribute
-            'style=',  // 3: Emerald — attribute
-            '<span>',  // 4: Coral — HTML tag
-            'href=',   // 5: Emerald — attribute
-            '<body>',  // 6: Coral — HTML tag
-            'true;',   // 7: Amber — JS literal
+            '<div>',   // 0: Coral — block container
+            '</div>',  // 1: Coral — closing block
+            '<span>',  // 2: Amber — inline container
+            '</span>',  // 3: Amber — closing inline
+            '<body>',  // 4: Coral — structural
+            '<br>',    // 5: Emerald — void element (self-closing)
+            '<h1>',    // 6: Sky Blue — heading
+            '</h1>',   // 7: Sky Blue — closing heading
         ],
         stringColors: [
             [0.98, 0.15, 0.45],  // 0: Coral
             [0.98, 0.15, 0.45],  // 1: Coral
-            [0.65, 0.89, 0.18],  // 2: Emerald
-            [0.65, 0.89, 0.18],  // 3: Emerald
+            [0.90, 0.86, 0.45],  // 2: Amber
+            [0.90, 0.86, 0.45],  // 3: Amber
             [0.98, 0.15, 0.45],  // 4: Coral
             [0.65, 0.89, 0.18],  // 5: Emerald
-            [0.98, 0.15, 0.45],  // 6: Coral
-            [0.90, 0.86, 0.45],  // 7: Amber
+            [0.33, 0.66, 0.95],  // 6: Sky Blue
+            [0.33, 0.66, 0.95],  // 7: Sky Blue
         ],
     },
     road: {

@@ -209,3 +209,69 @@ describe('computeGlyphIndexString', () => {
         expect((charPos0 - charPos1 + 8) % 8).toBe(1);
     });
 });
+
+// --- HTML validity ---
+
+describe('HTML string validity', () => {
+    // Import the actual HTML glyph set config
+    // We can't import atlasManager.js (it imports GNOME typelibs), so we
+    // duplicate the expected strings here as a contract. If the source
+    // changes, this test must be updated to match — and the change reviewed
+    // for HTML validity.
+    const HTML_STRINGS = [
+        '<div>',
+        '</div>',
+        '<span>',
+        '</span>',
+        '<body>',
+        '<br>',
+        '<h1>',
+        '</h1>',
+    ];
+
+    // Valid HTML tag pattern: opening, closing, or self-closing void element
+    const VALID_HTML_TAG = /^<\/?[a-zA-Z][a-zA-Z0-9]*>$/;
+
+    it('every string is a valid HTML tag (opening, closing, or void)', () => {
+        for (const str of HTML_STRINGS) {
+            expect(str).toMatch(VALID_HTML_TAG);
+        }
+    });
+
+    it('no string is an attribute fragment or non-HTML token', () => {
+        // These are NOT valid standalone HTML — they're fragments
+        const INVALID = ['class=', 'style=', 'href=', 'true;', 'fn', 'var', 'let', 'if'];
+        for (const str of HTML_STRINGS) {
+            expect(INVALID).not.toContain(str);
+        }
+    });
+
+    it('every string fits within 8 characters (atlas row limit)', () => {
+        for (const str of HTML_STRINGS) {
+            expect(str.length).toBeLessThanOrEqual(8);
+        }
+    });
+
+    it('opening and closing tags are paired', () => {
+        // For every closing tag </x>, there should be a matching <x>
+        const openingTags = HTML_STRINGS
+            .filter(s => /^<[a-zA-Z][a-zA-Z0-9]*>$/.test(s))
+            .map(s => s.slice(1, -1));
+        const closingTags = HTML_STRINGS
+            .filter(s => /^<\/[a-zA-Z][a-zA-Z0-9]*>$/.test(s))
+            .map(s => s.slice(2, -1));
+
+        for (const close of closingTags) {
+            expect(openingTags).toContain(close);
+        }
+    });
+
+    it('void elements (br, hr, img, input, meta, link) have no closing tag', () => {
+        const VOID_ELEMENTS = ['br', 'hr', 'img', 'input', 'meta', 'link'];
+        for (const voidEl of VOID_ELEMENTS) {
+            if (HTML_STRINGS.includes(`<${voidEl}>`)) {
+                expect(HTML_STRINGS).not.toContain(`</${voidEl}>`);
+            }
+        }
+    });
+});
