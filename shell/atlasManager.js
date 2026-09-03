@@ -12,6 +12,7 @@ import {
     GLYPH_ATLAS_ROWS,
     GLYPH_ATLAS_SIZE,
 } from './shader.js';
+import {generateStringChars} from './stringMode.js';
 
 export const GLYPH_SETS = {
     katakana: {
@@ -120,7 +121,7 @@ export class AtlasManager {
             );
         } else if (config.stringMode) {
             // String mode: render each string vertically in one atlas column
-            const chars = this._generateStringChars(config.strings, config.stringColors);
+            const chars = generateStringChars(config.strings, config.stringColors);
             content = this._renderProceduralAtlas(coglContext, chars, config.font);
         } else {
             // Procedurally render vector typography into atlas texture via Cairo & Pango
@@ -133,28 +134,6 @@ export class AtlasManager {
             count: config.count,
             stringMode: config.stringMode || false,
         };
-    }
-
-    /**
-     * Generate a 64-entry chars array from vertical strings.
-     * Each string occupies one atlas column; character j is at atlas row j.
-     * The chars array is row-major: chars[row * 8 + col].
-     * Empty cells (beyond string length) use empty text (transparent).
-     */
-    _generateStringChars(strings, stringColors) {
-        const chars = [];
-        for (let row = 0; row < GLYPH_ATLAS_ROWS; row++) {
-            for (let col = 0; col < GLYPH_ATLAS_COLUMNS; col++) {
-                const str = strings[col] || '';
-                const ch = str[row];
-                if (ch) {
-                    chars.push({text: ch, color: stringColors[col] || [1.0, 1.0, 1.0]});
-                } else {
-                    chars.push({text: '', color: [0, 0, 0]});
-                }
-            }
-        }
-        return chars;
     }
 
     _renderProceduralAtlas(coglContext, chars, font = 'Monospace, monospace, DejaVu Sans Mono Bold 44') {
