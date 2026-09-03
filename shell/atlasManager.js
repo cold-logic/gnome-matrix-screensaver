@@ -103,8 +103,13 @@ export class AtlasManager {
                 pixbuf.get_rowstride()
             );
         } else if (config.shaderMode === 'string') {
-            // String mode: render each string vertically in one atlas column
-            const chars = generateStringChars(config.strings, config.stringColors);
+            // String mode: render each string vertically in one atlas column.
+            // Reverse each string's characters so the first character ends up at
+            // the bottom of the atlas (near the rain head) and the last at the
+            // top. The rain head is at the bottom of the illuminated region, so
+            // reading from the head upward gives the string in correct order.
+            const reversedStrings = config.strings.map(s => [...s].reverse().join(''));
+            const chars = generateStringChars(reversedStrings, config.stringColors);
             content = this._renderProceduralAtlas(coglContext, chars, config.font, config.verticalText);
         } else {
             // Procedurally render vector typography into atlas texture via Cairo & Pango
@@ -158,15 +163,16 @@ export class AtlasManager {
             const [, extents] = layout.get_pixel_extents();
 
             if (verticalText) {
-                // Rotate 90° CW so text reads top-to-bottom when scrolling down.
-                // Translate to cell center, rotate, update Pango layout for the
-                // new CTM, then draw centered at origin.
+                // Rotate 90° CCW (book spine convention: tilt head right to read).
+                // Combined with reversed atlas character order, the rain head at
+                // the bottom shows the first character, and reading upward gives
+                // the string in correct order.
                 const cx = col * cellWidth + cellWidth / 2;
                 const cy = row * cellHeight + cellHeight / 2;
 
                 cr.save();
                 cr.translate(cx, cy);
-                cr.rotate(Math.PI / 2);
+                cr.rotate(-Math.PI / 2);
                 PangoCairo.update_layout(cr, layout);
 
                 // After rotation, the character's original width maps to the
