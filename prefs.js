@@ -154,6 +154,7 @@ export default class TealMatrixPreferences extends ExtensionPreferences {
         this._addScaleRow(settings, dynamicsGroup, 'row-spacing', _('Row Spacing / Tightness'), _('Vertical gap between characters in stream'), 50, 150, 5, '%');
         this._addScaleRow(settings, dynamicsGroup, 'glyph-scale', _('Glyph Scale'), _('Percentage of grid cell filled by symbol'), 50, 100, 5, '%');
         this._addScaleRow(settings, dynamicsGroup, 'stream-density', _('Stream Density'), _('Density of code streams'), 25, 200, 5, '%');
+        this._addScaleRow(settings, dynamicsGroup, 'stream-length', _('Stream Length'), _('Rain tail length (higher = longer visible trails)'), 25, 200, 5, '%');
 
         // Group 4: Optics / Shaders
         const opticsGroup = new Adw.PreferencesGroup({

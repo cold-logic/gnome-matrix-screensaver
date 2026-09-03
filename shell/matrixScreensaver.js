@@ -50,6 +50,7 @@ const MatrixScreensaverEffectBase = GObject.registerClass({
             matrix_soft_blur: [0.0],
             matrix_aa_sharpness: [0.5],
             matrix_glyph_count: [57.0],
+            matrix_stream_length: [1.0],
             matrix_rain_color: [0.051, 0.878, 0.922],
             matrix_cursor_color: [0.051, 0.878, 0.922],
         };
@@ -139,6 +140,13 @@ const MatrixScreensaverEffectBase = GObject.registerClass({
         const val = [densityPct / 100];
         this._state.matrix_stream_density = val;
         this._applyUniform('matrix_stream_density', 1, val);
+        this.queue_repaint();
+    }
+
+    setStreamLength(lengthPct) {
+        const val = [lengthPct / 100];
+        this._state.matrix_stream_length = val;
+        this._applyUniform('matrix_stream_length', 1, val);
         this.queue_repaint();
     }
 
@@ -295,6 +303,7 @@ class MonitorScreensaverActor {
         this._effect.setSpeed(settings.get_double('rain-speed'));
         this._effect.setGlyphScale(settings.get_double('glyph-scale'));
         this._effect.setStreamDensity(settings.get_double('stream-density'));
+        this._effect.setStreamLength(settings.get_double('stream-length'));
         this._effect.setGlowEnabled(settings.get_boolean('glow-enabled'));
         this._effect.setSoftBlurEnabled(settings.get_boolean('soft-blur-enabled'));
         this._effect.setAaSharpness(settings.get_double('aa-sharpness'));
@@ -413,6 +422,7 @@ export class MatrixScreensaverManager {
             'changed::row-spacing', () => this._rebuildActors(),
             'changed::glyph-scale', () => this._syncSettings(),
             'changed::stream-density', () => this._syncSettings(),
+            'changed::stream-length', () => this._syncSettings(),
             'changed::glow-enabled', () => this._syncSettings(),
             'changed::soft-blur-enabled', () => this._syncSettings(),
             'changed::aa-sharpness', () => this._syncSettings(),

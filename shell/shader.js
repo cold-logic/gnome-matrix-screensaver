@@ -26,6 +26,7 @@ uniform float matrix_stream_density;
 uniform float matrix_soft_blur;
 uniform float matrix_aa_sharpness;
 uniform float matrix_glyph_count;
+uniform float matrix_stream_length;
 uniform vec3 matrix_rain_color;
 uniform vec3 matrix_cursor_color;
 
@@ -88,8 +89,13 @@ float speed = mix(0.55, 1.45, depth);
  * Random mutation glyph selection.
  * Each cell picks a random glyph that changes over time via per-cell
  * mutation rate. Used by: katakana, binary, hex, road, ui.
+ *
+ * STREAM_LENGTH_BASE: base multiplier for rain tail length. 1.0 = classic
+ * Matrix rain look (28–78% of screen height). The user-facing stream-length
+ * slider multiplies on top of this base.
  */
 const GLYPH_SELECTION_RANDOM = `
+const float STREAM_LENGTH_BASE = 1.0;
 float mutation_seed = matrix_hash(cell_seed + 41.0);
 float mutation_rate = mix(0.20, 1.65, mutation_seed * mutation_seed);
 float glyph_epoch = floor(animation_time * mutation_rate +
@@ -106,8 +112,13 @@ float glyph_index = floor(matrix_hash(
  * (one string per atlas column, one char per atlas row). The string
  * scrolls downward at the per-column rain speed.
  * Used by: html.
+ *
+ * STREAM_LENGTH_BASE: 1.4 gives HTML mode 40% longer tails by default,
+ * so the full 8-character string is illuminated as the rain head passes.
+ * The user-facing stream-length slider multiplies on top of this base.
  */
 const GLYPH_SELECTION_STRING = `
+const float STREAM_LENGTH_BASE = 1.4;
 float string_index = floor(column_seed * 8.0);
 float string_scroll = floor(animation_time * speed);
 float char_pos = mod(cell.y - string_scroll, 8.0);
@@ -153,12 +164,18 @@ float _shaped = clamp((_raw_alpha - 0.5) * _aa_contrast + 0.5, 0.0, 1.0);
 float glyph_alpha = _shaped * glyph_cell_mask;
 
 
+// Stream length: user-facing slider (matrix_stream_length, 0.25–2.0) multiplied
+// by per-mode base (STREAM_LENGTH_BASE, compiled in). Clamped to 1.0 because
+// drop_length > period makes head = mod(travel, period) - length always negative,
+// rendering the drop invisible. 1.0 = full screen height.
+float stream_length_mul = clamp(matrix_stream_length, 0.25, 2.0);
+
 float period = mix(1.15, 2.65, column_seed);
 float phase = matrix_hash(cell.x * 19.33 + 7.0) * period;
 float primary_travel = animation_time * speed + phase;
 float primary_cycle = floor(primary_travel / period);
-float primary_length = mix(0.28, 0.78, matrix_hash(
-    cell.x * 5.73 + primary_cycle * 61.7 + 19.0));
+float primary_length = min(1.0, mix(0.28, 0.78, matrix_hash(
+    cell.x * 5.73 + primary_cycle * 61.7 + 19.0)) * STREAM_LENGTH_BASE * stream_length_mul);
 float head_one = mod(primary_travel, period) - primary_length;
 
 float row = (cell.y + 0.5) / matrix_rows;
@@ -170,8 +187,8 @@ vec3 first_drop = matrix_drop(head_one, row, primary_length, cell_height) *
 
 float second_travel = animation_time * speed * 0.91 + phase + period * 0.53;
 float second_cycle = floor(second_travel / period);
-float second_length = mix(0.24, 0.70, matrix_hash(
-    cell.x * 21.7 + second_cycle * 73.9 + 5.0));
+float second_length = min(1.0, mix(0.24, 0.70, matrix_hash(
+    cell.x * 21.7 + second_cycle * 73.9 + 5.0)) * STREAM_LENGTH_BASE * stream_length_mul);
 float head_two = mod(second_travel, period) - second_length;
 
 float secondary_probability = min(stream_density * 0.42, 1.0);

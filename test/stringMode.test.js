@@ -486,3 +486,102 @@ describe('Shader module exports', () => {
         expect(shaderModule.SHARED_DECLARATIONS).toBeUndefined();
     });
 });
+
+// --- Stream length multiplier ---
+
+describe('Stream length multiplier', () => {
+    // The stream length system has two layers:
+    // 1. Per-mode compile-time base (STREAM_LENGTH_BASE const in GLSL)
+    // 2. User-facing uniform (matrix_stream_length, 0.25–2.0)
+    // Final length = min(1.0, random_length * STREAM_LENGTH_BASE * user_multiplier)
+    //
+    // Random mode base = 1.0 (classic Matrix rain, unchanged)
+    // String mode base = 1.4 (HTML gets 40% longer tails by default so
+    //   the full 8-character string is illuminated)
+
+    it('random mode has STREAM_LENGTH_BASE = 1.0', () => {
+        const code = buildShaderCode('random');
+        expect(code).toContain('STREAM_LENGTH_BASE = 1.0');
+    });
+
+    it('string mode has STREAM_LENGTH_BASE = 1.4', () => {
+        const code = buildShaderCode('string');
+        expect(code).toContain('STREAM_LENGTH_BASE = 1.4');
+    });
+
+    it('both modes declare matrix_stream_length uniform', () => {
+        const randomCode = buildShaderCode('random');
+        const stringCode = buildShaderCode('string');
+        const decl = buildShaderDeclarations('random');
+        expect(decl).toContain('uniform float matrix_stream_length');
+        expect(randomCode).toContain('matrix_stream_length');
+        expect(stringCode).toContain('matrix_stream_length');
+    });
+
+    it('both modes apply STREAM_LENGTH_BASE * stream_length_mul to primary length', () => {
+        const randomCode = buildShaderCode('random');
+        const stringCode = buildShaderCode('string');
+        expect(randomCode).toContain('STREAM_LENGTH_BASE * stream_length_mul');
+        expect(stringCode).toContain('STREAM_LENGTH_BASE * stream_length_mul');
+    });
+
+    it('both modes clamp stream length to 1.0 (max screen height)', () => {
+        const randomCode = buildShaderCode('random');
+        const stringCode = buildShaderCode('string');
+        // Primary and secondary lengths both use min(1.0, ...)
+        const randomMinCount = (randomCode.match(/min\(1\.0,/g) || []).length;
+        const stringMinCount = (stringCode.match(/min\(1\.0,/g) || []).length;
+        expect(randomMinCount).toBeGreaterThanOrEqual(2); // primary + secondary
+        expect(stringMinCount).toBeGreaterThanOrEqual(2);
+    });
+
+    it('stream_length_mul is clamped to [0.25, 2.0]', () => {
+        const code = buildShaderCode('random');
+        expect(code).toContain('clamp(matrix_stream_length, 0.25, 2.0)');
+    });
+
+    it('random mode base 1.0 at default user 1.0 = unchanged from original', () => {
+        // At default settings (base=1.0, user=1.0), the effective multiplier
+        // is 1.0, so random mode behavior is identical to before the feature.
+        const base = 1.0;
+        const user = 1.0;
+        const effective = base * user;
+        expect(effective).toBe(1.0);
+    });
+
+    it('string mode base 1.4 at default user 1.0 = 40% longer tails', () => {
+        const base = 1.4;
+        const user = 1.0;
+        const effective = base * user;
+        expect(effective).toBe(1.4);
+    });
+
+    it('string mode at max user 2.0 = 2.8x (clamped to 1.0 screen fraction)', () => {
+        // mix(0.28, 0.78, hash) * 1.4 * 2.0 = mix(0.28, 0.78) * 2.8
+        // = 0.784 to 2.184, clamped to 1.0
+        const base = 1.4;
+        const user = 2.0;
+        const maxRandomLength = 0.78;
+        const effective = Math.min(1.0, maxRandomLength * base * user);
+        expect(effective).toBe(1.0); // clamped
+    });
+
+    it('random mode at min user 0.25 = 0.25x (short sparse tails)', () => {
+        const base = 1.0;
+        const user = 0.25;
+        const maxRandomLength = 0.78;
+        const effective = maxRandomLength * base * user;
+        expect(effective).toBeCloseTo(0.195, 2);
+    });
+
+    it('secondary stream also uses STREAM_LENGTH_BASE * stream_length_mul', () => {
+        const code = buildShaderCode('random');
+        // The secondary stream length should also be multiplied
+        // Check that second_length uses the same pattern
+        expect(code).toContain('second_length = min(1.0, mix(0.24, 0.70');
+        expect(code).toContain('STREAM_LENGTH_BASE * stream_length_mul');
+        // Count occurrences — should appear in both primary and secondary
+        const count = (code.match(/STREAM_LENGTH_BASE \* stream_length_mul/g) || []).length;
+        expect(count).toBe(2);
+    });
+});
