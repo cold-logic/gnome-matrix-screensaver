@@ -58,6 +58,17 @@ vec3 matrix_drop(float head, float row, float drop_length, float cell_height) {
     float cursor = 1.0 - smoothstep(0.0, cell_height * 0.92, distance_from_head);
     return vec3(tail, cursor, 0.0);
 }
+
+// Non-constant fall speed: modulates the rain head position with two
+// incommensurate sine waves so raindrops speed up and slow down naturally
+// instead of falling at a perfectly constant rate. The amplitude parameter
+// is per-mode (WOBBLE_AMPLITUDE const), passed at the call site.
+// Frequencies sqrt(2) and sqrt(5) are incommensurate so the pattern
+// never repeats exactly. At amplitude=0 the wobble is identity.
+// Adapted from Rezmason/matrix rainPass.raindrop.frag.glsl wobble().
+float matrix_wobble(float x, float amplitude) {
+    return x + 0.3 * amplitude * sin(1.41421356 * x) + 0.2 * amplitude * sin(2.23606798 * x);
+}
 `;
 
 /**
@@ -96,6 +107,7 @@ float speed = mix(0.55, 1.45, depth);
  */
 const GLYPH_SELECTION_RANDOM = `
 const float STREAM_LENGTH_BASE = 1.0;
+const float WOBBLE_AMPLITUDE = 1.0;
 float mutation_seed = matrix_hash(cell_seed + 41.0);
 float mutation_rate = mix(0.20, 1.65, mutation_seed * mutation_seed);
 float glyph_epoch = floor(animation_time * mutation_rate +
@@ -119,8 +131,9 @@ float glyph_index = floor(matrix_hash(
  */
 const GLYPH_SELECTION_STRING = `
 const float STREAM_LENGTH_BASE = 1.4;
+const float WOBBLE_AMPLITUDE = 0.5;
 float string_index = floor(column_seed * 8.0);
-float string_scroll = floor(animation_time * speed);
+float string_scroll = floor(matrix_wobble(animation_time * speed, WOBBLE_AMPLITUDE));
 float char_pos = mod(cell.y - string_scroll, 8.0);
 float glyph_index = floor(char_pos) * 8.0 + string_index;
 `;
@@ -172,7 +185,7 @@ float stream_length_mul = clamp(matrix_stream_length, 0.25, 2.0);
 
 float period = mix(1.15, 2.65, column_seed);
 float phase = matrix_hash(cell.x * 19.33 + 7.0) * period;
-float primary_travel = animation_time * speed + phase;
+float primary_travel = matrix_wobble(animation_time * speed + phase, WOBBLE_AMPLITUDE);
 float primary_cycle = floor(primary_travel / period);
 float primary_length = min(1.0, mix(0.28, 0.78, matrix_hash(
     cell.x * 5.73 + primary_cycle * 61.7 + 19.0)) * STREAM_LENGTH_BASE * stream_length_mul);
@@ -185,7 +198,7 @@ float primary_probability = min(stream_density * 0.72, 1.0);
 vec3 first_drop = matrix_drop(head_one, row, primary_length, cell_height) *
     step(1.0 - primary_probability, matrix_hash(cell.x * 33.7 + 29.0));
 
-float second_travel = animation_time * speed * 0.91 + phase + period * 0.53;
+float second_travel = matrix_wobble(animation_time * speed * 0.91 + phase + period * 0.53, WOBBLE_AMPLITUDE);
 float second_cycle = floor(second_travel / period);
 float second_length = min(1.0, mix(0.24, 0.70, matrix_hash(
     cell.x * 21.7 + second_cycle * 73.9 + 5.0)) * STREAM_LENGTH_BASE * stream_length_mul);

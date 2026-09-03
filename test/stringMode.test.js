@@ -585,3 +585,117 @@ describe('Stream length multiplier', () => {
         expect(count).toBe(2);
     });
 });
+
+// --- Non-constant fall speed (wobble) ---
+
+describe('Non-constant fall speed (wobble)', () => {
+    // The wobble modulates rain head position with two incommensurate sine
+    // waves so raindrops speed up and slow down naturally instead of falling
+    // at a constant rate. Adapted from Rezmason/matrix.
+    //
+    // Per-mode WOBBLE_AMPLITUDE const controls the strength:
+    // - Random mode: 1.0 (full naturalistic wobble, classic Matrix feel)
+    // - String mode: 0.5 (reduced wobble so HTML tokens stay readable)
+
+    it('random mode has WOBBLE_AMPLITUDE = 1.0', () => {
+        const code = buildShaderCode('random');
+        expect(code).toContain('WOBBLE_AMPLITUDE = 1.0');
+    });
+
+    it('string mode has WOBBLE_AMPLITUDE = 0.5', () => {
+        const code = buildShaderCode('string');
+        expect(code).toContain('WOBBLE_AMPLITUDE = 0.5');
+    });
+
+    it('both modes define matrix_wobble function', () => {
+        const decl = buildShaderDeclarations('random');
+        expect(decl).toContain('float matrix_wobble');
+    });
+
+    it('wobble uses incommensurate frequencies (sqrt 2 and sqrt 5)', () => {
+        const decl = buildShaderDeclarations('random');
+        // sqrt(2) ≈ 1.41421356, sqrt(5) ≈ 2.23606798
+        // These are incommensurate so the wobble pattern never repeats exactly
+        expect(decl).toContain('1.41421356');
+        expect(decl).toContain('2.23606798');
+    });
+
+    it('wobble uses two sine waves with 0.3 and 0.2 base amplitudes', () => {
+        const decl = buildShaderDeclarations('random');
+        expect(decl).toContain('0.3 * amplitude * sin');
+        expect(decl).toContain('0.2 * amplitude * sin');
+    });
+
+    it('both modes apply wobble to primary_travel', () => {
+        const randomCode = buildShaderCode('random');
+        const stringCode = buildShaderCode('string');
+        expect(randomCode).toContain('matrix_wobble(animation_time * speed + phase');
+        expect(stringCode).toContain('matrix_wobble(animation_time * speed + phase');
+    });
+
+    it('both modes apply wobble to second_travel', () => {
+        const randomCode = buildShaderCode('random');
+        const stringCode = buildShaderCode('string');
+        expect(randomCode).toContain('matrix_wobble(animation_time * speed * 0.91');
+        expect(stringCode).toContain('matrix_wobble(animation_time * speed * 0.91');
+    });
+
+    it('string mode applies wobble to string_scroll', () => {
+        const stringCode = buildShaderCode('string');
+        expect(stringCode).toContain('matrix_wobble(animation_time * speed, WOBBLE_AMPLITUDE)');
+    });
+
+    it('random mode does not apply wobble to string_scroll (no string_scroll)', () => {
+        const randomCode = buildShaderCode('random');
+        expect(randomCode).not.toContain('string_scroll');
+    });
+
+    it('wobble at amplitude 0 is identity (no wobble)', () => {
+        // Verify the math: at amplitude=0, the sine terms vanish
+        // matrix_wobble(x, 0) = x + 0.3*0*sin(...) + 0.2*0*sin(...) = x
+        const wobble = (x, amplitude) =>
+            x + 0.3 * amplitude * Math.sin(1.41421356 * x) + 0.2 * amplitude * Math.sin(2.23606798 * x);
+        for (const x of [0, 1, 2.5, 100, -3.7]) {
+            expect(wobble(x, 0)).toBeCloseTo(x, 10);
+        }
+    });
+
+    it('wobble at amplitude 1.0 produces non-identity variation', () => {
+        const wobble = (x, amplitude) =>
+            x + 0.3 * amplitude * Math.sin(1.41421356 * x) + 0.2 * amplitude * Math.sin(2.23606798 * x);
+        // At amplitude 1.0, the wobble should deviate from x
+        let hasVariation = false;
+        for (let x = 0; x < 100; x += 0.5) {
+            if (Math.abs(wobble(x, 1.0) - x) > 0.01) {
+                hasVariation = true;
+                break;
+            }
+        }
+        expect(hasVariation).toBe(true);
+    });
+
+    it('wobble at amplitude 0.5 produces half the variation of amplitude 1.0', () => {
+        const wobble = (x, amplitude) =>
+            x + 0.3 * amplitude * Math.sin(1.41421356 * x) + 0.2 * amplitude * Math.sin(2.23606798 * x);
+        // At a given x, the deviation at 0.5 should be exactly half of 1.0
+        const x = 3.7;
+        const dev1 = Math.abs(wobble(x, 1.0) - x);
+        const devHalf = Math.abs(wobble(x, 0.5) - x);
+        expect(devHalf).toBeCloseTo(dev1 * 0.5, 10);
+    });
+
+    it('wobble variation is bounded by max amplitude (0.5 at full)', () => {
+        // 0.3 + 0.2 = 0.5 max amplitude when both sines align
+        const wobble = (x, amplitude) =>
+            x + 0.3 * amplitude * Math.sin(1.41421356 * x) + 0.2 * amplitude * Math.sin(2.23606798 * x);
+        let maxDev = 0;
+        for (let x = 0; x < 1000; x += 0.01) {
+            const dev = Math.abs(wobble(x, 1.0) - x);
+            if (dev > maxDev) maxDev = dev;
+        }
+        // Max deviation should be <= 0.5 (theoretical max when both sines = ±1)
+        expect(maxDev).toBeLessThanOrEqual(0.5);
+        // Should be close to 0.5 (the sines will nearly align at some point)
+        expect(maxDev).toBeGreaterThan(0.45);
+    });
+});
