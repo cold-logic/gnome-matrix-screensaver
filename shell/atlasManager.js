@@ -37,7 +37,7 @@ export const GLYPH_SETS = {
         id: 'html',
         title: 'HTML & Web Rain',
         count: 64,
-        stringMode: true,
+        shaderMode: 'string',
         font: 'Monospace, monospace, DejaVu Sans Mono Bold 44',
         // Each string is rendered vertically in one atlas column (up to 8 chars).
         // The shader picks one string per screen column and scrolls through its
@@ -96,11 +96,12 @@ export class AtlasManager {
 
     getAtlas(glyphSetId = 'katakana') {
         const config = GLYPH_SETS[glyphSetId] || GLYPH_SETS.katakana;
+        const shaderMode = config.shaderMode || 'random';
         if (this._cache.has(config.id)) {
             return {
                 content: this._cache.get(config.id),
                 count: config.count,
-                stringMode: config.stringMode || false,
+                shaderMode,
             };
         }
 
@@ -120,7 +121,7 @@ export class AtlasManager {
                 pixbuf.get_height(),
                 pixbuf.get_rowstride()
             );
-        } else if (config.stringMode) {
+        } else if (config.shaderMode === 'string') {
             // String mode: render each string vertically in one atlas column
             const chars = generateStringChars(config.strings, config.stringColors);
             content = this._renderProceduralAtlas(coglContext, chars, config.font);
@@ -133,7 +134,7 @@ export class AtlasManager {
         return {
             content,
             count: config.count,
-            stringMode: config.stringMode || false,
+            shaderMode,
         };
     }
 

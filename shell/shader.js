@@ -1,12 +1,20 @@
 /**
  * GLSL Fragment Shader definitions and color parser for Teal Matrix Screensaver.
+ *
+ * The shader is composed from shared fragments plus a per-mode glyph selection
+ * section. This eliminates the branchless dual-path coupling: each theme gets
+ * a shader compiled for its specific mode, with no unused code paths.
  */
 
 export const GLYPH_ATLAS_COLUMNS = 8;
 export const GLYPH_ATLAS_ROWS = 8;
 export const GLYPH_ATLAS_SIZE = 512;
 
-export const SHADER_DECLARATIONS = `
+/**
+ * Shared declarations: uniforms, helper functions, and atlas sampling.
+ * Used by all shader modes.
+ */
+export const SHARED_DECLARATIONS = `
 uniform sampler2D cogl_sampler_0;
 uniform float matrix_time;
 uniform float matrix_columns;
@@ -18,7 +26,6 @@ uniform float matrix_stream_density;
 uniform float matrix_soft_blur;
 uniform float matrix_aa_sharpness;
 uniform float matrix_glyph_count;
-uniform float matrix_string_mode;
 uniform vec3 matrix_rain_color;
 uniform vec3 matrix_cursor_color;
 
@@ -52,7 +59,11 @@ vec3 matrix_drop(float head, float row, float drop_length, float cell_height) {
 }
 `;
 
-export const SHADER_CODE = `
+/**
+ * Shared shader preamble: computed before glyph selection.
+ * Returns cell coordinates, seeds, and per-column speed.
+ */
+const SHADER_PREAMBLE = `
 vec2 screen_uv = cogl_tex_coord_in[0].xy;
 vec2 grid_position = screen_uv * vec2(matrix_columns, matrix_rows);
 vec2 cell = floor(grid_position);
@@ -69,37 +80,45 @@ float cell_seed = cell.x * 131.0 + cell.y * 17.0;
 float column_seed = matrix_hash(cell.x * 7.17 + 3.0);
 float depth = matrix_hash(cell.x * 3.91 + 11.0);
 
-// Speed varies per column for visual depth. Moved here (before glyph selection)
-// so string mode can use it for scroll rate.
+// Speed varies per column for visual depth.
 float speed = mix(0.55, 1.45, depth);
+`;
 
-// --- Glyph selection ---
-// Two modes, selected branchlessly via matrix_string_mode uniform:
-//   0.0 = random mutation mode (default): each cell picks a random glyph
-//         that changes over time via per-cell mutation rate.
-//   1.0 = string mode: each screen column displays a recognizable string
-//         from the atlas (one string per atlas column, one char per atlas
-//         row). The string scrolls downward slowly, illuminated by rain.
+/**
+ * Random mutation glyph selection.
+ * Each cell picks a random glyph that changes over time via per-cell
+ * mutation rate. Used by: katakana, binary, hex, road, ui.
+ */
+const GLYPH_SELECTION_RANDOM = `
 float mutation_seed = matrix_hash(cell_seed + 41.0);
 float mutation_rate = mix(0.20, 1.65, mutation_seed * mutation_seed);
 float glyph_epoch = floor(animation_time * mutation_rate +
     cell.y * 0.173 + mutation_seed * 7.0);
 float glyph_epoch_periodic = mod(glyph_epoch, 1024.0);
 float active_glyph_count = max(2.0, matrix_glyph_count);
-float glyph_index_random = floor(matrix_hash(
+float glyph_index = floor(matrix_hash(
     cell_seed + glyph_epoch_periodic * 97.31) * active_glyph_count);
+`;
 
-// String mode: pick one of 8 atlas columns per screen column, scroll
-// through its 8 characters. char_pos = mod(cell.y - scroll, 8) makes the
-// string appear to fall downward as time advances.
+/**
+ * String mode glyph selection.
+ * Each screen column displays a recognizable string from the atlas
+ * (one string per atlas column, one char per atlas row). The string
+ * scrolls downward at the per-column rain speed.
+ * Used by: html.
+ */
+const GLYPH_SELECTION_STRING = `
 float string_index = floor(column_seed * 8.0);
 float string_scroll = floor(animation_time * speed);
 float char_pos = mod(cell.y - string_scroll, 8.0);
-float glyph_index_string = floor(char_pos) * 8.0 + string_index;
+float glyph_index = floor(char_pos) * 8.0 + string_index;
+`;
 
-float glyph_index = mix(glyph_index_random, glyph_index_string,
-    step(0.5, matrix_string_mode));
-
+/**
+ * Shared shader body: everything after glyph selection.
+ * Supersampling, AA, rain animation, glow, compositing.
+ */
+const SHADER_BODY = `
 // 4x supersampling: the FBO is at monitor resolution but the shader maps each
 // screen cell (~20px) to an atlas cell in the FBO (~240 texels) — a 12:1
 // minification. Bilinear LINEAR filtering only taps 4 FBO texels per screen
@@ -256,6 +275,31 @@ vec3 final_color = core_color * core_alpha + active_rain_color * halo_alpha;
 // Output: Pure opaque solid black background with glowing code rain
 cogl_color_out = vec4(final_color, 1.0);
 `;
+
+/**
+ * Build the complete shader code for a given mode.
+ *
+ * @param {string} mode - 'random' (default) or 'string'
+ * @returns {string} Composed GLSL fragment shader code
+ */
+export function buildShaderCode(mode = 'random') {
+    const selection = mode === 'string' ? GLYPH_SELECTION_STRING : GLYPH_SELECTION_RANDOM;
+    return SHADER_PREAMBLE + selection + SHADER_BODY;
+}
+
+/**
+ * Build the declarations string for a given mode.
+ * Currently all modes share the same declarations.
+ * @param {string} _mode - unused for now, reserved for future per-mode uniforms
+ * @returns {string} GLSL declarations
+ */
+export function buildShaderDeclarations(_mode = 'random') {
+    return SHARED_DECLARATIONS;
+}
+
+// Backward compatibility: default shader code for random mode
+export const SHADER_DECLARATIONS = SHARED_DECLARATIONS;
+export const SHADER_CODE = buildShaderCode('random');
 
 export function parseColorToRgb(str, fallback = [0.051, 0.878, 0.922]) {
     try {

@@ -9,8 +9,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import {AtlasManager} from './atlasManager.js';
 import {
-    SHADER_CODE,
-    SHADER_DECLARATIONS,
+    buildShaderCode,
+    buildShaderDeclarations,
     parseColorToRgb,
 } from './shader.js';
 
@@ -25,6 +25,10 @@ export const MatrixScreensaverEffect = GObject.registerClass({
     GTypeName: 'MatrixScreensaverEffect_ColdLogicGnome50',
 }, class MatrixScreensaverEffect extends Shell.GLSLEffect {
     _init(params) {
+        // Extract shaderMode before passing remaining params to super
+        this._shaderMode = params?.shaderMode || 'random';
+        if (params && params.shaderMode !== undefined)
+            delete params.shaderMode;
         super._init(params);
         this._locations = new Map();
         this._state = {
@@ -38,7 +42,6 @@ export const MatrixScreensaverEffect = GObject.registerClass({
             matrix_soft_blur: [0.0],
             matrix_aa_sharpness: [0.5],
             matrix_glyph_count: [57.0],
-            matrix_string_mode: [0.0],
             matrix_rain_color: [0.051, 0.878, 0.922],
             matrix_cursor_color: [0.051, 0.878, 0.922],
         };
@@ -47,8 +50,8 @@ export const MatrixScreensaverEffect = GObject.registerClass({
     vfunc_build_pipeline() {
         this.add_glsl_snippet(
             Cogl.SnippetHook.FRAGMENT,
-            SHADER_DECLARATIONS,
-            SHADER_CODE,
+            buildShaderDeclarations(this._shaderMode),
+            buildShaderCode(this._shaderMode),
             false
         );
         if (this._locations) {
@@ -171,13 +174,6 @@ export const MatrixScreensaverEffect = GObject.registerClass({
         this.queue_repaint();
     }
 
-    setStringMode(enabled) {
-        const val = [enabled ? 1.0 : 0.0];
-        this._state.matrix_string_mode = val;
-        this._applyUniform('matrix_string_mode', 1, val);
-        this.queue_repaint();
-    }
-
     setTime(seconds) {
         this._state.matrix_time = [seconds];
         this._applyUniform('matrix_time', 1, [seconds]);
@@ -221,12 +217,13 @@ class MonitorScreensaverActor {
         });
         this._actor.add_child(grid);
 
-        this._effect = new MatrixScreensaverEffect();
+        this._effect = new MatrixScreensaverEffect({
+            shaderMode: glyphAtlas.shaderMode || 'random',
+        });
         grid.add_effect(this._effect);
 
         this._effect.setGridGeometry(cols, rows);
         this._effect.setGlyphCount(glyphAtlas.count);
-        this._effect.setStringMode(glyphAtlas.stringMode || false);
         this.updateSettings(settings);
 
         this._buttonPressId = this._actor.connect('button-press-event', () => {

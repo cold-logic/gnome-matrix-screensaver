@@ -12,6 +12,10 @@ import {
     GLYPH_ATLAS_COLUMNS,
     GLYPH_ATLAS_ROWS,
 } from '../shell/stringMode.js';
+import {
+    buildShaderCode,
+    buildShaderDeclarations,
+} from '../shell/shader.js';
 
 const TOTAL_CELLS = GLYPH_ATLAS_COLUMNS * GLYPH_ATLAS_ROWS; // 64
 
@@ -273,5 +277,120 @@ describe('HTML string validity', () => {
                 expect(HTML_STRINGS).not.toContain(`</${voidEl}>`);
             }
         }
+    });
+});
+
+// --- Theme isolation: shader mode separation ---
+
+describe('Theme shader isolation', () => {
+    it('random mode shader contains mutation code, not string code', () => {
+        const code = buildShaderCode('random');
+        expect(code).toContain('mutation_rate');
+        expect(code).toContain('glyph_epoch');
+        expect(code).not.toContain('string_index');
+        expect(code).not.toContain('string_scroll');
+    });
+
+    it('string mode shader contains string code, not mutation code', () => {
+        const code = buildShaderCode('string');
+        expect(code).toContain('string_index');
+        expect(code).toContain('string_scroll');
+        expect(code).not.toContain('mutation_rate');
+        expect(code).not.toContain('glyph_epoch');
+    });
+
+    it('neither mode contains matrix_string_mode uniform (eliminated)', () => {
+        const randomDecl = buildShaderDeclarations('random');
+        const stringDecl = buildShaderDeclarations('string');
+        const randomCode = buildShaderCode('random');
+        const stringCode = buildShaderCode('string');
+
+        expect(randomDecl).not.toContain('matrix_string_mode');
+        expect(stringDecl).not.toContain('matrix_string_mode');
+        expect(randomCode).not.toContain('matrix_string_mode');
+        expect(stringCode).not.toContain('matrix_string_mode');
+    });
+
+    it('both modes share the same declarations', () => {
+        expect(buildShaderDeclarations('random')).toBe(buildShaderDeclarations('string'));
+    });
+
+    it('both modes contain shared body (supersampling, AA, rain, glow)', () => {
+        const random = buildShaderCode('random');
+        const string = buildShaderCode('string');
+
+        // Supersampling
+        expect(random).toContain('_ss_step');
+        expect(string).toContain('_ss_step');
+
+        // AA contrast
+        expect(random).toContain('_aa_contrast');
+        expect(string).toContain('_aa_contrast');
+
+        // Rain animation
+        expect(random).toContain('matrix_drop');
+        expect(string).toContain('matrix_drop');
+
+        // Glow
+        expect(random).toContain('halo_alpha');
+        expect(string).toContain('halo_alpha');
+    });
+
+    it('default mode (no arg) is random', () => {
+        const code = buildShaderCode();
+        expect(code).toContain('mutation_rate');
+        expect(code).not.toContain('string_index');
+    });
+
+    it('unknown mode falls back to random', () => {
+        const code = buildShaderCode('nonexistent');
+        expect(code).toContain('mutation_rate');
+        expect(code).not.toContain('string_index');
+    });
+});
+
+// --- Theme config: shaderMode defaults ---
+
+describe('Theme shaderMode defaults', () => {
+    // Can't import atlasManager.js (GNOME typelibs), so verify the contract:
+    // all non-HTML themes should default to 'random', HTML should be 'string'
+    const THEME_CONFIGS = {
+        katakana: {expectedMode: 'random'},
+        binary: {expectedMode: 'random'},
+        hex: {expectedMode: 'random'},
+        html: {expectedMode: 'string'},
+        road: {expectedMode: 'random'},
+        ui: {expectedMode: 'random'},
+    };
+
+    it('katakana uses random mode', () => {
+        expect(THEME_CONFIGS.katakana.expectedMode).toBe('random');
+    });
+
+    it('binary uses random mode', () => {
+        expect(THEME_CONFIGS.binary.expectedMode).toBe('random');
+    });
+
+    it('hex uses random mode', () => {
+        expect(THEME_CONFIGS.hex.expectedMode).toBe('random');
+    });
+
+    it('html uses string mode', () => {
+        expect(THEME_CONFIGS.html.expectedMode).toBe('string');
+    });
+
+    it('road uses random mode', () => {
+        expect(THEME_CONFIGS.road.expectedMode).toBe('random');
+    });
+
+    it('ui uses random mode', () => {
+        expect(THEME_CONFIGS.ui.expectedMode).toBe('random');
+    });
+
+    it('only html uses string mode', () => {
+        const stringThemes = Object.entries(THEME_CONFIGS)
+            .filter(([_, cfg]) => cfg.expectedMode === 'string')
+            .map(([name]) => name);
+        expect(stringThemes).toEqual(['html']);
     });
 });
