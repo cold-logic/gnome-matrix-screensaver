@@ -93,8 +93,8 @@
     <key name="aa-sharpness" type="d">
       <default>50.0</default>
       <range min="0.0" max="100.0"/>
-      <summary>Edge Sharpness</summary>
-      <description>Anti-aliasing edge crispness. Low = soft feathered edges, High = sharp crisp edges.</description>
+      <summary>Anti-Aliasing</summary>
+      <description>Glyph edge smoothness. Low = sharp crisp edges, High = soft feathered edges.</description>
     </key>
   </schema>
 </schemalist>

@@ -105,11 +105,12 @@ vec4 glyph_sample = (_ss_1 + _ss_2 + _ss_3 + _ss_4) * 0.25;
 //   white text → max(r,g,b)=1.0 ✓; colored text → max channel ✓.
 float _raw_alpha = max(max(glyph_sample.r, glyph_sample.g), glyph_sample.b);
 
-// AA sharpness: contrast curve centered at 0.5.
-// matrix_aa_sharpness=0 → contrast=1 (identity, natural soft AA from PNG).
-// matrix_aa_sharpness=1 → contrast=32 (near-hard edge, ~1px transition).
+// Anti-aliasing amount: slider is user-facing as "Anti-Aliasing" where 100% = max AA
+// (soft feathered edges) and 0% = min AA (sharp crisp edges). Internally we invert
+// to get the contrast factor: high AA → low contrast (identity, natural soft AA),
+// low AA → high contrast (near-hard edge, ~1px transition).
 // Black (0) and white (1) pixels are unaffected; only the mid-gray AA zone is squeezed.
-float _aa_contrast = mix(1.0, 32.0, matrix_aa_sharpness);
+float _aa_contrast = mix(1.0, 32.0, 1.0 - matrix_aa_sharpness);
 float _shaped = clamp((_raw_alpha - 0.5) * _aa_contrast + 0.5, 0.0, 1.0);
 float glyph_alpha = _shaped * glyph_cell_mask;
 
