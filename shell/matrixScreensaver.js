@@ -86,9 +86,6 @@ const MatrixScreensaverEffectBase = GObject.registerClass({
     }
 
     _applyUniform(name, count, values) {
-        if (!this._locations) {
-            this._locations = new Map();
-        }
         let loc = this._locations.get(name);
         if (loc === undefined || loc === -1) {
             loc = this.get_uniform_location(name);
@@ -196,7 +193,7 @@ const MatrixScreensaverEffectRandom = GObject.registerClass({
     vfunc_build_pipeline() {
         this.add_glsl_snippet(
             Cogl.SnippetHook.FRAGMENT,
-            buildShaderDeclarations('random'),
+            buildShaderDeclarations(),
             buildShaderCode('random'),
             false
         );
@@ -216,7 +213,7 @@ const MatrixScreensaverEffectString = GObject.registerClass({
     vfunc_build_pipeline() {
         this.add_glsl_snippet(
             Cogl.SnippetHook.FRAGMENT,
-            buildShaderDeclarations('string'),
+            buildShaderDeclarations(),
             buildShaderCode('string'),
             false
         );
@@ -245,9 +242,7 @@ export function createEffect(shaderMode = 'random', params = {}) {
  */
 class MonitorScreensaverActor {
     constructor(monitor, settings, glyphAtlas, onDismissCallback) {
-        this._monitor = monitor;
         this._onDismiss = onDismissCallback;
-        this._glyphAtlas = glyphAtlas;
 
         this._actor = new Clutter.Actor({
             clip_to_allocation: true,
@@ -378,7 +373,6 @@ class MonitorScreensaverActor {
             this._actor = null;
         }
         this._effect = null;
-        this._glyphAtlas = null;
     }
 }
 
@@ -388,7 +382,6 @@ class MonitorScreensaverActor {
 export class MatrixScreensaverManager {
     constructor(settings, extensionPath) {
         this._settings = settings;
-        this._extensionPath = extensionPath;
         this._isActive = false;
         this._isManualTest = false;
         this._manualTestArmSourceId = null;
@@ -405,7 +398,7 @@ export class MatrixScreensaverManager {
 
         // Connect shell signals
         Main.layoutManager.connectObject('monitors-changed', () => this._rebuildActors(), this);
-        
+
         // Lock screen awareness — screenShield is a Signals.EventEmitter,
         // not a GObject, so connectObject() is unavailable. Use plain connect().
         if (Main.screenShield) {

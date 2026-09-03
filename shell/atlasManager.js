@@ -14,28 +14,24 @@ import {
 } from './shader.js';
 import {generateStringChars} from './stringMode.js';
 
-export const GLYPH_SETS = {
+const GLYPH_SETS = {
     katakana: {
         id: 'katakana',
-        title: 'Classic Katakana',
         count: 57,
         staticAsset: 'matrixcode_mask_rgb.png',
     },
     binary: {
         id: 'binary',
-        title: 'Binary Stream',
         count: 2,
         chars: ['0', '1'],
     },
     hex: {
         id: 'hex',
-        title: 'Hexadecimal Dump',
         count: 16,
         chars: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'],
     },
     html: {
         id: 'html',
-        title: 'HTML & Web Rain',
         count: 64,
         shaderMode: 'string',
         font: 'Monospace, monospace, DejaVu Sans Mono Bold 44',
@@ -66,7 +62,6 @@ export const GLYPH_SETS = {
     },
     road: {
         id: 'road',
-        title: 'Road & Public Signs',
         count: 24,
         font: 'Noto Color Emoji, DejaVu Sans, Symbola, Sans Bold 38',
         chars: [
@@ -77,7 +72,6 @@ export const GLYPH_SETS = {
     },
     ui: {
         id: 'ui',
-        title: 'Digital UI Icons',
         count: 24,
         font: 'Noto Color Emoji, DejaVu Sans, Symbola, Sans Bold 38',
         chars: [

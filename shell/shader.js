@@ -43,11 +43,6 @@ vec4 matrix_glyph_sample(float glyph_index, vec2 local) {
     return texture2D(cogl_sampler_0, atlas_uv);
 }
 
-float matrix_glyph_alpha(float glyph_index, vec2 local) {
-    vec4 tex = matrix_glyph_sample(glyph_index, local);
-    return max(max(tex.r, tex.g), tex.b);
-}
-
 vec3 matrix_drop(float head, float row, float drop_length, float cell_height) {
     float distance_from_head = head - row;
 
@@ -318,12 +313,10 @@ export function buildShaderCode(mode = 'random') {
 }
 
 /**
- * Build the declarations string for a given mode.
- * Currently all modes share the same declarations.
- * @param {string} _mode - unused for now, reserved for future per-mode uniforms
+ * Build the declarations string shared by all shader modes.
  * @returns {string} GLSL declarations
  */
-export function buildShaderDeclarations(_mode = 'random') {
+export function buildShaderDeclarations() {
     return SHARED_DECLARATIONS;
 }
 
