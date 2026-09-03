@@ -297,10 +297,6 @@ export function buildShaderDeclarations(_mode = 'random') {
     return SHARED_DECLARATIONS;
 }
 
-// Backward compatibility: default shader code for random mode
-export const SHADER_DECLARATIONS = SHARED_DECLARATIONS;
-export const SHADER_CODE = buildShaderCode('random');
-
 export function parseColorToRgb(str, fallback = [0.051, 0.878, 0.922]) {
     try {
         if (!str)

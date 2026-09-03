@@ -19,16 +19,24 @@ const FADE_IN_DURATION_MS = 800;
 const FADE_OUT_DURATION_MS = 350;
 
 /**
- * GLSL Effect Class
+ * GLSL Effect base class.
+ *
+ * Shell.GLSLEffect caches the compiled pipeline on the GType class
+ * (klass->base_pipeline), not per-instance. The first construction of a
+ * given GType calls vfunc_build_pipeline(); all subsequent instances of
+ * the same GType skip it and copy the cached pipeline.
+ *
+ * This means a single GType can only hold one shader variant. To support
+ * multiple shader modes (random vs string), we register separate GTypes
+ * per mode. Each subclass hardcodes its shader mode in
+ * vfunc_build_pipeline(), getting its own class-level pipeline cache.
+ *
+ * Use createEffect(shaderMode) to instantiate the correct subclass.
  */
-export const MatrixScreensaverEffect = GObject.registerClass({
-    GTypeName: 'MatrixScreensaverEffect_ColdLogicGnome50',
-}, class MatrixScreensaverEffect extends Shell.GLSLEffect {
-    _init(params) {
-        // Extract shaderMode before passing remaining params to super
-        this._shaderMode = params?.shaderMode || 'random';
-        if (params && params.shaderMode !== undefined)
-            delete params.shaderMode;
+const MatrixScreensaverEffectBase = GObject.registerClass({
+    GTypeName: 'MatrixScreensaverEffectBase_ColdLogic',
+}, class MatrixScreensaverEffectBase extends Shell.GLSLEffect {
+    _init(params = {}) {
         super._init(params);
         this._locations = new Map();
         this._state = {
@@ -45,18 +53,6 @@ export const MatrixScreensaverEffect = GObject.registerClass({
             matrix_rain_color: [0.051, 0.878, 0.922],
             matrix_cursor_color: [0.051, 0.878, 0.922],
         };
-    }
-
-    vfunc_build_pipeline() {
-        this.add_glsl_snippet(
-            Cogl.SnippetHook.FRAGMENT,
-            buildShaderDeclarations(this._shaderMode),
-            buildShaderCode(this._shaderMode),
-            false
-        );
-        if (this._locations) {
-            this._locations.clear();
-        }
     }
 
     vfunc_pre_paint(node, paintContext) {
@@ -182,6 +178,61 @@ export const MatrixScreensaverEffect = GObject.registerClass({
 });
 
 /**
+ * Random mutation mode effect.
+ * Each GType gets its own class-level base_pipeline cache, so this
+ * shader is compiled once and reused for all random-mode instances.
+ */
+const MatrixScreensaverEffectRandom = GObject.registerClass({
+    GTypeName: 'MatrixScreensaverEffectRandom_ColdLogic',
+}, class MatrixScreensaverEffectRandom extends MatrixScreensaverEffectBase {
+    vfunc_build_pipeline() {
+        this.add_glsl_snippet(
+            Cogl.SnippetHook.FRAGMENT,
+            buildShaderDeclarations('random'),
+            buildShaderCode('random'),
+            false
+        );
+        if (this._locations) {
+            this._locations.clear();
+        }
+    }
+});
+
+/**
+ * String mode effect.
+ * Separate GType → separate class-level pipeline cache.
+ */
+const MatrixScreensaverEffectString = GObject.registerClass({
+    GTypeName: 'MatrixScreensaverEffectString_ColdLogic',
+}, class MatrixScreensaverEffectString extends MatrixScreensaverEffectBase {
+    vfunc_build_pipeline() {
+        this.add_glsl_snippet(
+            Cogl.SnippetHook.FRAGMENT,
+            buildShaderDeclarations('string'),
+            buildShaderCode('string'),
+            false
+        );
+        if (this._locations) {
+            this._locations.clear();
+        }
+    }
+});
+
+/**
+ * Factory: create the correct effect subclass for a shader mode.
+ *
+ * @param {string} shaderMode - 'random' or 'string'
+ * @param {object} params - Constructor params (passed through, not mutated)
+ * @returns {MatrixScreensaverEffectBase} Effect instance
+ */
+export function createEffect(shaderMode = 'random', params = {}) {
+    if (shaderMode === 'string') {
+        return new MatrixScreensaverEffectString(params);
+    }
+    return new MatrixScreensaverEffectRandom(params);
+}
+
+/**
  * Single Monitor Matrix Actor
  */
 class MonitorScreensaverActor {
@@ -217,9 +268,7 @@ class MonitorScreensaverActor {
         });
         this._actor.add_child(grid);
 
-        this._effect = new MatrixScreensaverEffect({
-            shaderMode: glyphAtlas.shaderMode || 'random',
-        });
+        this._effect = createEffect(glyphAtlas.shaderMode || 'random');
         grid.add_effect(this._effect);
 
         this._effect.setGridGeometry(cols, rows);
