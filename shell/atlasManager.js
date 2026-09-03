@@ -35,7 +35,8 @@ export const GLYPH_SETS = {
     html: {
         id: 'html',
         title: 'HTML & Web Rain',
-        count: 36,
+        count: 56,
+        font: 'Monospace, monospace, DejaVu Sans Mono Bold 36',
         chars: [
             // Coral / Rose Pink: Tags, element names & slashes
             { text: '<', color: [0.98, 0.15, 0.45] },
@@ -49,6 +50,14 @@ export const GLYPH_SETS = {
             { text: 'h', color: [0.98, 0.15, 0.45] },
             { text: '1', color: [0.98, 0.15, 0.45] },
 
+            // Multi-char HTML tokens (rendered as single atlas cells)
+            { text: '<div', color: [0.98, 0.15, 0.45] },
+            { text: '</>', color: [0.98, 0.15, 0.45] },
+            { text: '<a>', color: [0.98, 0.15, 0.45] },
+            { text: '<p>', color: [0.98, 0.15, 0.45] },
+            { text: '<h1', color: [0.98, 0.15, 0.45] },
+            { text: 'div>', color: [0.98, 0.15, 0.45] },
+
             // Warm White / Pale Slate: Braces, brackets & semicolons
             { text: '{', color: [0.97, 0.97, 0.95] },
             { text: '}', color: [0.97, 0.97, 0.95] },
@@ -58,6 +67,11 @@ export const GLYPH_SETS = {
             { text: ')', color: [0.97, 0.97, 0.95] },
             { text: ';', color: [0.97, 0.97, 0.95] },
             { text: ':', color: [0.97, 0.97, 0.95] },
+
+            // Multi-char CSS/JS tokens
+            { text: '{}', color: [0.97, 0.97, 0.95] },
+            { text: '();', color: [0.97, 0.97, 0.95] },
+            { text: '[]', color: [0.97, 0.97, 0.95] },
 
             // Electric Emerald / Lime: Attributes, identifiers & operators
             { text: '&', color: [0.65, 0.89, 0.18] },
@@ -74,12 +88,35 @@ export const GLYPH_SETS = {
             { text: '_', color: [0.65, 0.89, 0.18] },
             { text: '~', color: [0.65, 0.89, 0.18] },
 
+            // Multi-char attribute tokens
+            { text: 'href', color: [0.65, 0.89, 0.18] },
+            { text: 'class', color: [0.65, 0.89, 0.18] },
+            { text: 'id=', color: [0.65, 0.89, 0.18] },
+            { text: 'src=', color: [0.65, 0.89, 0.18] },
+            { text: 'rel=', color: [0.65, 0.89, 0.18] },
+
             // Canary Amber / Gold: Values, quotes & literals
             { text: '"', color: [0.90, 0.86, 0.45] },
             { text: '\'', color: [0.90, 0.86, 0.45] },
             { text: '2', color: [0.90, 0.86, 0.45] },
             { text: 'b', color: [0.90, 0.86, 0.45] },
             { text: 'r', color: [0.90, 0.86, 0.45] },
+
+            // Multi-char string/value tokens
+            { text: '""', color: [0.90, 0.86, 0.45] },
+            { text: '"42', color: [0.90, 0.86, 0.45] },
+            { text: '0px', color: [0.90, 0.86, 0.45] },
+            { text: '100%', color: [0.90, 0.86, 0.45] },
+            { text: 'true', color: [0.90, 0.86, 0.45] },
+            { text: 'null', color: [0.90, 0.86, 0.45] },
+
+            // Sky Blue: Keywords & function names (new 5th category)
+            { text: 'fn', color: [0.33, 0.66, 0.95] },
+            { text: 'var', color: [0.33, 0.66, 0.95] },
+            { text: 'let', color: [0.33, 0.66, 0.95] },
+            { text: 'if', color: [0.33, 0.66, 0.95] },
+            { text: 'for', color: [0.33, 0.66, 0.95] },
+            { text: 'return', color: [0.33, 0.66, 0.95] },
         ],
     },
     road: {
