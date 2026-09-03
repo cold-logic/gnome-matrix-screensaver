@@ -158,7 +158,7 @@ export class AtlasManager {
             const [, extents] = layout.get_pixel_extents();
 
             if (verticalText) {
-                // Rotate 90° CCW so text reads top-to-bottom when scrolling down.
+                // Rotate 90° CW so text reads top-to-bottom when scrolling down.
                 // Translate to cell center, rotate, update Pango layout for the
                 // new CTM, then draw centered at origin.
                 const cx = col * cellWidth + cellWidth / 2;
@@ -166,7 +166,7 @@ export class AtlasManager {
 
                 cr.save();
                 cr.translate(cx, cy);
-                cr.rotate(-Math.PI / 2);
+                cr.rotate(Math.PI / 2);
                 PangoCairo.update_layout(cr, layout);
 
                 // After rotation, the character's original width maps to the
