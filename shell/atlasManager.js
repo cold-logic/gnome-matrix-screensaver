@@ -35,88 +35,31 @@ export const GLYPH_SETS = {
     html: {
         id: 'html',
         title: 'HTML & Web Rain',
-        count: 56,
-        font: 'Monospace, monospace, DejaVu Sans Mono Bold 36',
-        chars: [
-            // Coral / Rose Pink: Tags, element names & slashes
-            { text: '<', color: [0.98, 0.15, 0.45] },
-            { text: '>', color: [0.98, 0.15, 0.45] },
-            { text: '/', color: [0.98, 0.15, 0.45] },
-            { text: 'd', color: [0.98, 0.15, 0.45] },
-            { text: 'i', color: [0.98, 0.15, 0.45] },
-            { text: 'v', color: [0.98, 0.15, 0.45] },
-            { text: 'p', color: [0.98, 0.15, 0.45] },
-            { text: 'a', color: [0.98, 0.15, 0.45] },
-            { text: 'h', color: [0.98, 0.15, 0.45] },
-            { text: '1', color: [0.98, 0.15, 0.45] },
-
-            // Multi-char HTML tokens (rendered as single atlas cells)
-            { text: '<div', color: [0.98, 0.15, 0.45] },
-            { text: '</>', color: [0.98, 0.15, 0.45] },
-            { text: '<a>', color: [0.98, 0.15, 0.45] },
-            { text: '<p>', color: [0.98, 0.15, 0.45] },
-            { text: '<h1', color: [0.98, 0.15, 0.45] },
-            { text: 'div>', color: [0.98, 0.15, 0.45] },
-
-            // Warm White / Pale Slate: Braces, brackets & semicolons
-            { text: '{', color: [0.97, 0.97, 0.95] },
-            { text: '}', color: [0.97, 0.97, 0.95] },
-            { text: '[', color: [0.97, 0.97, 0.95] },
-            { text: ']', color: [0.97, 0.97, 0.95] },
-            { text: '(', color: [0.97, 0.97, 0.95] },
-            { text: ')', color: [0.97, 0.97, 0.95] },
-            { text: ';', color: [0.97, 0.97, 0.95] },
-            { text: ':', color: [0.97, 0.97, 0.95] },
-
-            // Multi-char CSS/JS tokens
-            { text: '{}', color: [0.97, 0.97, 0.95] },
-            { text: '();', color: [0.97, 0.97, 0.95] },
-            { text: '[]', color: [0.97, 0.97, 0.95] },
-
-            // Electric Emerald / Lime: Attributes, identifiers & operators
-            { text: '&', color: [0.65, 0.89, 0.18] },
-            { text: '=', color: [0.65, 0.89, 0.18] },
-            { text: '!', color: [0.65, 0.89, 0.18] },
-            { text: '?', color: [0.65, 0.89, 0.18] },
-            { text: '#', color: [0.65, 0.89, 0.18] },
-            { text: '.', color: [0.65, 0.89, 0.18] },
-            { text: '*', color: [0.65, 0.89, 0.18] },
-            { text: '+', color: [0.65, 0.89, 0.18] },
-            { text: '-', color: [0.65, 0.89, 0.18] },
-            { text: '%', color: [0.65, 0.89, 0.18] },
-            { text: '$', color: [0.65, 0.89, 0.18] },
-            { text: '_', color: [0.65, 0.89, 0.18] },
-            { text: '~', color: [0.65, 0.89, 0.18] },
-
-            // Multi-char attribute tokens
-            { text: 'href', color: [0.65, 0.89, 0.18] },
-            { text: 'class', color: [0.65, 0.89, 0.18] },
-            { text: 'id=', color: [0.65, 0.89, 0.18] },
-            { text: 'src=', color: [0.65, 0.89, 0.18] },
-            { text: 'rel=', color: [0.65, 0.89, 0.18] },
-
-            // Canary Amber / Gold: Values, quotes & literals
-            { text: '"', color: [0.90, 0.86, 0.45] },
-            { text: '\'', color: [0.90, 0.86, 0.45] },
-            { text: '2', color: [0.90, 0.86, 0.45] },
-            { text: 'b', color: [0.90, 0.86, 0.45] },
-            { text: 'r', color: [0.90, 0.86, 0.45] },
-
-            // Multi-char string/value tokens
-            { text: '""', color: [0.90, 0.86, 0.45] },
-            { text: '"42', color: [0.90, 0.86, 0.45] },
-            { text: '0px', color: [0.90, 0.86, 0.45] },
-            { text: '100%', color: [0.90, 0.86, 0.45] },
-            { text: 'true', color: [0.90, 0.86, 0.45] },
-            { text: 'null', color: [0.90, 0.86, 0.45] },
-
-            // Sky Blue: Keywords & function names (new 5th category)
-            { text: 'fn', color: [0.33, 0.66, 0.95] },
-            { text: 'var', color: [0.33, 0.66, 0.95] },
-            { text: 'let', color: [0.33, 0.66, 0.95] },
-            { text: 'if', color: [0.33, 0.66, 0.95] },
-            { text: 'for', color: [0.33, 0.66, 0.95] },
-            { text: 'return', color: [0.33, 0.66, 0.95] },
+        count: 64,
+        stringMode: true,
+        font: 'Monospace, monospace, DejaVu Sans Mono Bold 44',
+        // Each string is rendered vertically in one atlas column (up to 8 chars).
+        // The shader picks one string per screen column and scrolls through its
+        // characters, so each rain stream displays a recognizable HTML token.
+        strings: [
+            '<div>',   // 0: Coral — HTML tag
+            '</div>',  // 1: Coral — closing tag
+            'class=',  // 2: Emerald — attribute
+            'style=',  // 3: Emerald — attribute
+            '<span>',  // 4: Coral — HTML tag
+            'href=',   // 5: Emerald — attribute
+            '<body>',  // 6: Coral — HTML tag
+            'true;',   // 7: Amber — JS literal
+        ],
+        stringColors: [
+            [0.98, 0.15, 0.45],  // 0: Coral
+            [0.98, 0.15, 0.45],  // 1: Coral
+            [0.65, 0.89, 0.18],  // 2: Emerald
+            [0.65, 0.89, 0.18],  // 3: Emerald
+            [0.98, 0.15, 0.45],  // 4: Coral
+            [0.65, 0.89, 0.18],  // 5: Emerald
+            [0.98, 0.15, 0.45],  // 6: Coral
+            [0.90, 0.86, 0.45],  // 7: Amber
         ],
     },
     road: {
@@ -155,6 +98,7 @@ export class AtlasManager {
             return {
                 content: this._cache.get(config.id),
                 count: config.count,
+                stringMode: config.stringMode || false,
             };
         }
 
@@ -174,6 +118,10 @@ export class AtlasManager {
                 pixbuf.get_height(),
                 pixbuf.get_rowstride()
             );
+        } else if (config.stringMode) {
+            // String mode: render each string vertically in one atlas column
+            const chars = this._generateStringChars(config.strings, config.stringColors);
+            content = this._renderProceduralAtlas(coglContext, chars, config.font);
         } else {
             // Procedurally render vector typography into atlas texture via Cairo & Pango
             content = this._renderProceduralAtlas(coglContext, config.chars, config.font);
@@ -183,7 +131,30 @@ export class AtlasManager {
         return {
             content,
             count: config.count,
+            stringMode: config.stringMode || false,
         };
+    }
+
+    /**
+     * Generate a 64-entry chars array from vertical strings.
+     * Each string occupies one atlas column; character j is at atlas row j.
+     * The chars array is row-major: chars[row * 8 + col].
+     * Empty cells (beyond string length) use empty text (transparent).
+     */
+    _generateStringChars(strings, stringColors) {
+        const chars = [];
+        for (let row = 0; row < GLYPH_ATLAS_ROWS; row++) {
+            for (let col = 0; col < GLYPH_ATLAS_COLUMNS; col++) {
+                const str = strings[col] || '';
+                const ch = str[row];
+                if (ch) {
+                    chars.push({text: ch, color: stringColors[col] || [1.0, 1.0, 1.0]});
+                } else {
+                    chars.push({text: '', color: [0, 0, 0]});
+                }
+            }
+        }
+        return chars;
     }
 
     _renderProceduralAtlas(coglContext, chars, font = 'Monospace, monospace, DejaVu Sans Mono Bold 44') {
@@ -209,6 +180,9 @@ export class AtlasManager {
         for (let i = 0; i < chars.length && i < (GLYPH_ATLAS_COLUMNS * GLYPH_ATLAS_ROWS); i++) {
             const item = chars[i];
             const text = (typeof item === 'string') ? item : item.text;
+            // Skip empty entries (e.g. padding beyond string length in string mode)
+            if (!text)
+                continue;
             const color = (typeof item === 'object' && item.color) ? item.color : [1.0, 1.0, 1.0];
 
             cr.setSourceRGBA(color[0], color[1], color[2], 1.0);

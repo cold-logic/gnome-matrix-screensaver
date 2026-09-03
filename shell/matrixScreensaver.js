@@ -38,6 +38,7 @@ export const MatrixScreensaverEffect = GObject.registerClass({
             matrix_soft_blur: [0.0],
             matrix_aa_sharpness: [0.5],
             matrix_glyph_count: [57.0],
+            matrix_string_mode: [0.0],
             matrix_rain_color: [0.051, 0.878, 0.922],
             matrix_cursor_color: [0.051, 0.878, 0.922],
         };
@@ -170,6 +171,13 @@ export const MatrixScreensaverEffect = GObject.registerClass({
         this.queue_repaint();
     }
 
+    setStringMode(enabled) {
+        const val = [enabled ? 1.0 : 0.0];
+        this._state.matrix_string_mode = val;
+        this._applyUniform('matrix_string_mode', 1, val);
+        this.queue_repaint();
+    }
+
     setTime(seconds) {
         this._state.matrix_time = [seconds];
         this._applyUniform('matrix_time', 1, [seconds]);
@@ -218,6 +226,7 @@ class MonitorScreensaverActor {
 
         this._effect.setGridGeometry(cols, rows);
         this._effect.setGlyphCount(glyphAtlas.count);
+        this._effect.setStringMode(glyphAtlas.stringMode || false);
         this.updateSettings(settings);
 
         this._buttonPressId = this._actor.connect('button-press-event', () => {
