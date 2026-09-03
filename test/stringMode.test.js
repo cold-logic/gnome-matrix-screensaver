@@ -8,6 +8,8 @@
 import {describe, it, expect} from 'bun:test';
 import {
     generateStringChars,
+    HTML_STRINGS,
+    HTML_STRING_COLORS,
 } from '../shell/stringMode.js';
 import {
     buildShaderCode,
@@ -99,21 +101,9 @@ describe('generateStringChars', () => {
 // --- HTML validity ---
 
 describe('HTML string validity', () => {
-    // Import the actual HTML glyph set config
-    // We can't import atlasManager.js (it imports GNOME typelibs), so we
-    // duplicate the expected strings here as a contract. If the source
-    // changes, this test must be updated to match — and the change reviewed
-    // for HTML validity.
-    const HTML_STRINGS = [
-        '<div>',
-        '</div>',
-        '<span>',
-        '</span>',
-        '<body>',
-        '<br>',
-        '<h1>',
-        '</h1>',
-    ];
+    // HTML_STRINGS is imported from stringMode.js (single source of truth).
+    // atlasManager.js also imports from stringMode.js, so tests and production
+    // code share the same data — no duplication drift risk.
 
     // Valid HTML tag pattern: opening, closing, or self-closing void element
     const VALID_HTML_TAG = /^<\/?[a-zA-Z][a-zA-Z0-9]*>$/;
@@ -144,11 +134,25 @@ describe('HTML string validity', () => {
         }
     });
 
-    it('void elements (br, hr, img, input, meta, link) have no closing tag', () => {
+    it('void elements in the set have no closing tag', () => {
+        // For every opening tag <x> that is a void element, verify no </x> exists.
+        // This is only meaningful for elements actually present in HTML_STRINGS.
         const VOID_ELEMENTS = ['br', 'hr', 'img', 'input', 'meta', 'link'];
-        for (const voidEl of VOID_ELEMENTS) {
-            if (HTML_STRINGS.includes(`<${voidEl}>`)) {
-                expect(HTML_STRINGS).not.toContain(`</${voidEl}>`);
+        const presentVoidElements = VOID_ELEMENTS.filter(el =>
+            HTML_STRINGS.includes(`<${el}>`));
+        expect(presentVoidElements.length).toBeGreaterThan(0); // at least one void element
+        for (const voidEl of presentVoidElements) {
+            expect(HTML_STRINGS).not.toContain(`</${voidEl}>`);
+        }
+    });
+
+    it('HTML_STRING_COLORS aligns with HTML_STRINGS', () => {
+        expect(HTML_STRING_COLORS.length).toBe(HTML_STRINGS.length);
+        for (const color of HTML_STRING_COLORS) {
+            expect(color).toHaveLength(3);
+            for (const channel of color) {
+                expect(channel).toBeGreaterThanOrEqual(0.0);
+                expect(channel).toBeLessThanOrEqual(1.0);
             }
         }
     });
@@ -315,8 +319,10 @@ describe('Non-constant fall speed (wobble)', () => {
     it('both modes apply wobble to primary_travel', () => {
         const randomCode = buildShaderCode('random');
         const stringCode = buildShaderCode('string');
+        // Random mode inlines the travel expression
         expect(randomCode).toContain('matrix_wobble(animation_time * speed + phase');
-        expect(stringCode).toContain('matrix_wobble(animation_time * speed + phase');
+        // String mode uses base_travel variable (for scroll sync) but still wobbles
+        expect(stringCode).toContain('primary_travel = matrix_wobble(base_travel');
     });
 
     it('both modes apply wobble to second_travel', () => {
@@ -326,8 +332,46 @@ describe('Non-constant fall speed (wobble)', () => {
         expect(stringCode).toContain('matrix_wobble(animation_time * speed * 0.91');
     });
 
-    it('string mode applies wobble to string_scroll', () => {
+    it('string mode does NOT apply wobble to string_scroll', () => {
         const stringCode = buildShaderCode('string');
-        expect(stringCode).toContain('matrix_wobble(animation_time * speed, WOBBLE_AMPLITUDE)');
+        // string_scroll uses unwobbled base_travel to prevent character jumping.
+        // The wobble on the rain head provides naturalistic speed; the string
+        // scroll stays smooth.
+        expect(stringCode).toContain('string_scroll = mod(base_travel');
+        expect(stringCode).not.toContain('matrix_wobble(animation_time * speed, WOBBLE_AMPLITUDE)');
+    });
+});
+
+// --- String mode: scroll sync and variety ---
+
+describe('String mode scroll sync', () => {
+    it('string_scroll uses base_travel (synced to rain head)', () => {
+        const stringCode = buildShaderCode('string');
+        // base_travel is the unwobbled travel, shared between rain head and string scroll
+        expect(stringCode).toContain('float base_travel = animation_time * speed + phase');
+        expect(stringCode).toContain('string_scroll = mod(base_travel, period)');
+    });
+
+    it('string_index changes per rain cycle (not fixed per column)', () => {
+        const stringCode = buildShaderCode('string');
+        // string_index uses primary_cycle so each column shows different strings
+        // over time, instead of being locked to one string forever
+        expect(stringCode).toContain('string_index = floor(matrix_hash(');
+        expect(stringCode).toContain('primary_cycle');
+        // Must NOT use the old fixed-per-column pattern
+        expect(stringCode).not.toContain('string_index = floor(column_seed * 8.0)');
+    });
+
+    it('string mode rain head and string scroll share base_travel', () => {
+        const stringCode = buildShaderCode('string');
+        // Both primary_travel and string_scroll derive from base_travel
+        const baseTravelCount = (stringCode.match(/base_travel/g) || []).length;
+        expect(baseTravelCount).toBeGreaterThanOrEqual(3); // definition + wobble + scroll
+    });
+
+    it('random mode does not contain base_travel', () => {
+        const randomCode = buildShaderCode('random');
+        // base_travel is string-mode-only (for scroll sync)
+        expect(randomCode).not.toContain('base_travel');
     });
 });

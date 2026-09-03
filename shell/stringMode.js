@@ -11,6 +11,40 @@ import {
 } from './shader.js';
 
 /**
+ * HTML strings for the HTML theme.
+ * Each string is a valid HTML tag (opening, closing, or void).
+ * Rendered vertically: one string per atlas column, one char per atlas row.
+ *
+ * Single source of truth — imported by both atlasManager.js (production)
+ * and test/stringMode.test.js (verification).
+ */
+export const HTML_STRINGS = [
+    '<div>',   // 0: Coral — block container
+    '</div>',  // 1: Coral — closing block
+    '<span>',  // 2: Amber — inline container
+    '</span>',  // 3: Amber — closing inline
+    '<body>',  // 4: Coral — structural
+    '<br>',    // 5: Emerald — void element (self-closing)
+    '<h1>',    // 6: Sky Blue — heading
+    '</h1>',   // 7: Sky Blue — closing heading
+];
+
+/**
+ * Per-string RGB colors for HTML syntax highlighting.
+ * Indices align with HTML_STRINGS.
+ */
+export const HTML_STRING_COLORS = [
+    [0.98, 0.15, 0.45],  // 0: Coral
+    [0.98, 0.15, 0.45],  // 1: Coral
+    [0.90, 0.86, 0.45],  // 2: Amber
+    [0.90, 0.86, 0.45],  // 3: Amber
+    [0.98, 0.15, 0.45],  // 4: Coral
+    [0.65, 0.89, 0.18],  // 5: Emerald
+    [0.33, 0.66, 0.95],  // 6: Sky Blue
+    [0.33, 0.66, 0.95],  // 7: Sky Blue
+];
+
+/**
  * Default color when stringColors is shorter than strings.
  */
 const DEFAULT_COLOR = [1.0, 1.0, 1.0];

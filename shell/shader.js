@@ -114,30 +114,28 @@ float glyph_index = floor(matrix_hash(
 `;
 
 /**
- * String mode glyph selection.
- * Each screen column displays a recognizable string from the atlas
- * (one string per atlas column, one char per atlas row). The string
- * scrolls downward at the per-column rain speed.
- * Used by: html.
+ * String mode constants.
+ * The glyph_index computation moves to SHADER_RAIN_STRING because it
+ * depends on the rain head (for scroll sync). This section only declares
+ * the per-mode constants that SHADER_RAIN_STRING references.
  *
  * STREAM_LENGTH_BASE: 1.4 gives HTML mode 40% longer tails by default,
  * so the full 8-character string is illuminated as the rain head passes.
  * The user-facing stream-length slider multiplies on top of this base.
+ *
+ * WOBBLE_AMPLITUDE: 0.5 (reduced from random mode's 1.0) so HTML tokens
+ * stay readable. Applied to the rain head only, not the string scroll.
  */
 const GLYPH_SELECTION_STRING = `
 const float STREAM_LENGTH_BASE = 1.4;
 const float WOBBLE_AMPLITUDE = 0.5;
-float string_index = floor(column_seed * 8.0);
-float string_scroll = floor(matrix_wobble(animation_time * speed, WOBBLE_AMPLITUDE));
-float char_pos = mod(cell.y - string_scroll, 8.0);
-float glyph_index = floor(char_pos) * 8.0 + string_index;
 `;
 
 /**
- * Shared shader body: everything after glyph selection.
- * Supersampling, AA, rain animation, glow, compositing.
+ * Shared shader rendering: supersampling + anti-aliasing.
+ * Used by all shader modes. Produces glyph_sample, glyph_alpha.
  */
-const SHADER_BODY = `
+const SHADER_RENDERING = `
 // 4x supersampling: the FBO is at monitor resolution but the shader maps each
 // screen cell (~20px) to an atlas cell in the FBO (~240 texels) — a 12:1
 // minification. Bilinear LINEAR filtering only taps 4 FBO texels per screen
@@ -170,7 +168,13 @@ float _raw_alpha = max(max(glyph_sample.r, glyph_sample.g), glyph_sample.b);
 float _aa_contrast = mix(1.0, 32.0, 1.0 - matrix_aa_sharpness);
 float _shaped = clamp((_raw_alpha - 0.5) * _aa_contrast + 0.5, 0.0, 1.0);
 float glyph_alpha = _shaped * glyph_cell_mask;
+`;
 
+/**
+ * Random mode rain: rain head + stream illumination.
+ * Produces rain (vec3) and illumination (float).
+ */
+const SHADER_RAIN_RANDOM = `
 
 // Stream length: user-facing slider (matrix_stream_length, 0.25–2.0) multiplied
 // by per-mode base (STREAM_LENGTH_BASE, compiled in). Clamped to 1.0 because
@@ -208,7 +212,81 @@ rain.z = mix(first_drop.x, second_drop.x, 0.5) *
     step(0.01, first_drop.x) * step(0.01, second_drop.x);
 
 float illumination = clamp(rain.x * 0.88 + rain.y * 0.78 + rain.z * 0.30, 0.0, 1.0);
+`;
 
+/**
+ * String mode rain: synced rain head + string scroll + illumination.
+ *
+ * The rain head and string scroll share the same base travel rate so
+ * characters scroll in lockstep with the illumination window. The
+ * wobble is applied to the rain head only (naturalistic speed); the
+ * string scroll uses the unwobbled base_travel for smooth, jump-free
+ * character advancement.
+ *
+ * string_index changes per rain cycle (via primary_cycle) so each
+ * column shows different strings over time instead of being locked
+ * to one string forever.
+ *
+ * Produces glyph_index (for SHADER_RENDERING), rain, illumination
+ * (for SHADER_COMPOSITE).
+ */
+const SHADER_RAIN_STRING = `
+
+// Stream length: user-facing slider (matrix_stream_length, 0.25–2.0) multiplied
+// by per-mode base (STREAM_LENGTH_BASE, compiled in). Clamped to 1.0 because
+// drop_length > period makes head = mod(travel, period) - length always negative,
+// rendering the drop invisible. 1.0 = full screen height.
+float stream_length_mul = clamp(matrix_stream_length, 0.25, 2.0);
+
+float period = mix(1.15, 2.65, column_seed);
+float phase = matrix_hash(cell.x * 19.33 + 7.0) * period;
+float base_travel = animation_time * speed + phase;
+float primary_travel = matrix_wobble(base_travel, WOBBLE_AMPLITUDE);
+float primary_cycle = floor(primary_travel / period);
+float primary_length = min(1.0, mix(0.28, 0.78, matrix_hash(
+    cell.x * 5.73 + primary_cycle * 61.7 + 19.0)) * STREAM_LENGTH_BASE * stream_length_mul);
+float head_one = mod(primary_travel, period) - primary_length;
+
+// String scroll: synced to rain head via shared base_travel.
+// Uses unwobbled base_travel so characters don't jump when the
+// wobble oscillates. The rain head wobble shifts the illuminated
+// window relative to the string, but since the string repeats
+// every 8 rows, the shift is invisible — only the head speed varies.
+float string_scroll = mod(base_travel, period) * matrix_rows;
+float string_index = floor(matrix_hash(
+    cell.x * 7.91 + primary_cycle * 13.13) * 8.0);
+float char_pos = mod(cell.y - string_scroll, 8.0);
+float glyph_index = floor(char_pos) * 8.0 + string_index;
+
+float row = (cell.y + 0.5) / matrix_rows;
+float cell_height = 1.0 / matrix_rows;
+
+float primary_probability = min(stream_density * 0.72, 1.0);
+vec3 first_drop = matrix_drop(head_one, row, primary_length, cell_height) *
+    step(1.0 - primary_probability, matrix_hash(cell.x * 33.7 + 29.0));
+
+float second_travel = matrix_wobble(animation_time * speed * 0.91 + phase + period * 0.53, WOBBLE_AMPLITUDE);
+float second_cycle = floor(second_travel / period);
+float second_length = min(1.0, mix(0.24, 0.70, matrix_hash(
+    cell.x * 21.7 + second_cycle * 73.9 + 5.0)) * STREAM_LENGTH_BASE * stream_length_mul);
+float head_two = mod(second_travel, period) - second_length;
+
+float secondary_probability = min(stream_density * 0.42, 1.0);
+vec3 second_drop = matrix_drop(head_two, row, second_length, cell_height) *
+    step(1.0 - secondary_probability, matrix_hash(cell.x * 47.19 + 53.0));
+
+vec3 rain = max(first_drop, second_drop);
+rain.z = mix(first_drop.x, second_drop.x, 0.5) *
+    step(0.01, first_drop.x) * step(0.01, second_drop.x);
+
+float illumination = clamp(rain.x * 0.88 + rain.y * 0.78 + rain.z * 0.30, 0.0, 1.0);
+`;
+
+/**
+ * Shared shader composite: colors, glow, output.
+ * Consumes rain, illumination, glyph_sample, glyph_alpha.
+ */
+const SHADER_COMPOSITE = `
 // Multi-Color Syntax Detection: check if atlas sample has chromatic color.
 // Compare against _raw_alpha (actual atlas luminance), NOT glyph_alpha (which is
 // _shaped * glyph_cell_mask). The AA contrast curve shifts _shaped away from the
@@ -304,12 +382,23 @@ cogl_color_out = vec4(final_color, 1.0);
 /**
  * Build the complete shader code for a given mode.
  *
+ * Random mode: glyph_index is computed independently in the selection
+ * section, so the order is SELECTION → RENDERING → RAIN → COMPOSITE.
+ *
+ * String mode: glyph_index depends on the rain head (for scroll sync),
+ * so the rain section must precede rendering: CONSTANTS → RAIN_STRING
+ * (computes glyph_index + rain) → RENDERING → COMPOSITE.
+ *
  * @param {string} mode - 'random' (default) or 'string'
  * @returns {string} Composed GLSL fragment shader code
  */
 export function buildShaderCode(mode = 'random') {
-    const selection = mode === 'string' ? GLYPH_SELECTION_STRING : GLYPH_SELECTION_RANDOM;
-    return SHADER_PREAMBLE + selection + SHADER_BODY;
+    if (mode === 'string') {
+        return SHADER_PREAMBLE + GLYPH_SELECTION_STRING +
+            SHADER_RAIN_STRING + SHADER_RENDERING + SHADER_COMPOSITE;
+    }
+    return SHADER_PREAMBLE + GLYPH_SELECTION_RANDOM +
+        SHADER_RENDERING + SHADER_RAIN_RANDOM + SHADER_COMPOSITE;
 }
 
 /**

@@ -12,7 +12,7 @@ import {
     GLYPH_ATLAS_ROWS,
     GLYPH_ATLAS_SIZE,
 } from './shader.js';
-import {generateStringChars} from './stringMode.js';
+import {generateStringChars, HTML_STRINGS, HTML_STRING_COLORS} from './stringMode.js';
 
 const GLYPH_SETS = {
     katakana: {
@@ -39,26 +39,8 @@ const GLYPH_SETS = {
         // The shader picks one string per screen column and scrolls through its
         // characters, so each rain stream displays a recognizable HTML token.
         // Every string is a valid HTML snippet on its own.
-        strings: [
-            '<div>',   // 0: Coral — block container
-            '</div>',  // 1: Coral — closing block
-            '<span>',  // 2: Amber — inline container
-            '</span>',  // 3: Amber — closing inline
-            '<body>',  // 4: Coral — structural
-            '<br>',    // 5: Emerald — void element (self-closing)
-            '<h1>',    // 6: Sky Blue — heading
-            '</h1>',   // 7: Sky Blue — closing heading
-        ],
-        stringColors: [
-            [0.98, 0.15, 0.45],  // 0: Coral
-            [0.98, 0.15, 0.45],  // 1: Coral
-            [0.90, 0.86, 0.45],  // 2: Amber
-            [0.90, 0.86, 0.45],  // 3: Amber
-            [0.98, 0.15, 0.45],  // 4: Coral
-            [0.65, 0.89, 0.18],  // 5: Emerald
-            [0.33, 0.66, 0.95],  // 6: Sky Blue
-            [0.33, 0.66, 0.95],  // 7: Sky Blue
-        ],
+        strings: HTML_STRINGS,
+        stringColors: HTML_STRING_COLORS,
     },
     road: {
         id: 'road',
