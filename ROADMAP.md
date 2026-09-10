@@ -11,6 +11,9 @@ This document tracks planned features, architectural improvements, and milestone
 - [x] **Quick Settings Menu Toggle:**
   - Add a dedicated quick settings tile in GNOME Shell's top-right control menu.
   - Quick toggle to enable/disable screensaver, switch color profiles, or trigger an instant screensaver lock.
+- [x] **Top Panel Status Indicator:**
+  - Dedicated icon directly on the GNOME Shell top panel status bar.
+  - Click popup menu with master toggle switch, "Trigger Screensaver Now" preview action, and direct settings shortcut.
 - [x] **Session Inhibit Awareness:**
   - Monitor `org.gnome.SessionManager.Inhibit` and full-screen video playback flags (mpv, VLC, web browsers) to automatically inhibit idle screensaver activation during media playback.
 

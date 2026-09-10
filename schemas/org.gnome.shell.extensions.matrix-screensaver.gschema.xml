@@ -27,6 +27,11 @@
       <summary>Lock Screen Rain</summary>
       <description>Show falling digital rain behind the lock screen / shield.</description>
     </key>
+    <key name="panel-indicator-enabled" type="b">
+      <default>true</default>
+      <summary>Top Panel Indicator</summary>
+      <description>Show quick control menu indicator in the GNOME Shell top panel.</description>
+    </key>
     <key name="glyph-set" type="s">
       <choices>
         <choice value="katakana"/>

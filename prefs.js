@@ -27,30 +27,6 @@ export default class TealMatrixPreferences extends ExtensionPreferences {
         });
         window.add(page);
 
-        // Group 0: Test & Live Preview
-        const previewGroup = new Adw.PreferencesGroup({
-            title: _('Live Preview &amp; Test'),
-            description: _('Immediately preview the screensaver with your current settings.'),
-        });
-        page.add(previewGroup);
-
-        const testRow = new Adw.ActionRow({
-            title: _('Test Screensaver'),
-            subtitle: _('Launches fullscreen screensaver now (move mouse or click to exit)'),
-        });
-        const testButton = new Gtk.Button({
-            label: _('Launch Test Preview'),
-            valign: Gtk.Align.CENTER,
-            css_classes: ['suggested-action'],
-        });
-        testButton.connect('clicked', () => {
-            const current = settings.get_int('test-trigger');
-            settings.set_int('test-trigger', (current + 1) % 1000000);
-        });
-        testRow.add_suffix(testButton);
-        testRow.set_activatable_widget(testButton);
-        previewGroup.add(testRow);
-
         // Group 1: Timing & Trigger
         const timingGroup = new Adw.PreferencesGroup({
             title: _('Activation Timing &amp; Integration'),
@@ -95,6 +71,14 @@ export default class TealMatrixPreferences extends ExtensionPreferences {
         });
         settings.bind('lockscreen-enabled', lockscreenRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         timingGroup.add(lockscreenRow);
+
+        const panelIndicatorRow = new Adw.SwitchRow({
+            title: _('Top Panel Indicator'),
+            subtitle: _('Display quick control icon and menu in the GNOME top bar'),
+            active: settings.get_boolean('panel-indicator-enabled'),
+        });
+        settings.bind('panel-indicator-enabled', panelIndicatorRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        timingGroup.add(panelIndicatorRow);
 
         // Group 2: Appearance & Glyphs
         const appearanceGroup = new Adw.PreferencesGroup({
@@ -180,6 +164,30 @@ export default class TealMatrixPreferences extends ExtensionPreferences {
         opticsGroup.add(blurRow);
 
         this._addScaleRow(settings, opticsGroup, 'aa-sharpness', _('Anti-Aliasing'), _('Glyph edge smoothness (low = sharp crisp, high = soft feathered)'), 0, 100, 1, '%');
+
+        // Group 5: Test & Live Preview
+        const previewGroup = new Adw.PreferencesGroup({
+            title: _('Live Preview &amp; Test'),
+            description: _('Immediately preview the screensaver with your current settings.'),
+        });
+        page.add(previewGroup);
+
+        const testRow = new Adw.ActionRow({
+            title: _('Test Screensaver'),
+            subtitle: _('Launches fullscreen screensaver now (move mouse or click to exit)'),
+        });
+        const testButton = new Gtk.Button({
+            label: _('Launch Test Preview'),
+            valign: Gtk.Align.CENTER,
+            css_classes: ['suggested-action'],
+        });
+        testButton.connect('clicked', () => {
+            const current = settings.get_int('test-trigger');
+            settings.set_int('test-trigger', (current + 1) % 1000000);
+        });
+        testRow.add_suffix(testButton);
+        testRow.set_activatable_widget(testButton);
+        previewGroup.add(testRow);
     }
 
     _addColorRow(settings, group, key, title, subtitle, defaultHex) {
